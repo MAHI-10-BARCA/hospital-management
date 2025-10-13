@@ -1,8 +1,13 @@
 package com.hms.entity;
 
-import jakarta.persistence.*;
-import java.time.LocalDate;
-import java.time.LocalTime;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 
 @Entity
 public class Appointment {
@@ -11,33 +16,33 @@ public class Appointment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long patientId;
-    private Long doctorId;
-    private LocalDate date;
-    private LocalTime time;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "patient_id", nullable = false)
+    private Patient patient;
 
-    public Appointment() {}
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "doctor_id", nullable = false)
+    private Doctor doctor;
 
-    public Appointment(Long patientId, Long doctorId, LocalDate date, LocalTime time) {
-        this.patientId = patientId;
-        this.doctorId = doctorId;
-        this.date = date;
-        this.time = time;
-    }
+    // Link directly to the schedule slot
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "schedule_id", nullable = false, unique = true)
+    private DoctorSchedule schedule;
+
+    private String reason;
+    private String status; // e.g., "SCHEDULED", "COMPLETED", "CANCELED"
 
     // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
-
-    public Long getPatientId() { return patientId; }
-    public void setPatientId(Long patientId) { this.patientId = patientId; }
-
-    public Long getDoctorId() { return doctorId; }
-    public void setDoctorId(Long doctorId) { this.doctorId = doctorId; }
-
-    public LocalDate getDate() { return date; }
-    public void setDate(LocalDate date) { this.date = date; }
-
-    public LocalTime getTime() { return time; }
-    public void setTime(LocalTime time) { this.time = time; }
+    public Patient getPatient() { return patient; }
+    public void setPatient(Patient patient) { this.patient = patient; }
+    public Doctor getDoctor() { return doctor; }
+    public void setDoctor(Doctor doctor) { this.doctor = doctor; }
+    public DoctorSchedule getSchedule() { return schedule; }
+    public void setSchedule(DoctorSchedule schedule) { this.schedule = schedule; }
+    public String getReason() { return reason; }
+    public void setReason(String reason) { this.reason = reason; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 }

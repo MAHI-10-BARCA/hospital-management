@@ -1,42 +1,51 @@
 package com.hms.controller;
 
-import com.hms.entity.Appointment;
-import com.hms.service.AppointmentService;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.hms.entity.Appointment;
+import com.hms.service.AppointmentService;
+
 @RestController
-@RequestMapping("/appointments") // CORRECTED URL
+@RequestMapping("/api/appointments")
+@CrossOrigin(origins = "*") // Configure for your frontend URL
 public class AppointmentController {
 
-    private final AppointmentService appointmentService;
+    @Autowired
+    private AppointmentService appointmentService;
 
-    public AppointmentController(AppointmentService appointmentService) {
-        this.appointmentService = appointmentService;
-    }
-
+    // Patient books an appointment
     @PostMapping
     public ResponseEntity<Appointment> createAppointment(@RequestBody Appointment appointment) {
-        return ResponseEntity.ok(appointmentService.saveAppointment(appointment));
+        return ResponseEntity.ok(appointmentService.createAppointment(appointment));
     }
 
+    // Admin gets all appointments
     @GetMapping
     public List<Appointment> getAllAppointments() {
         return appointmentService.getAllAppointments();
     }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<Appointment> getAppointmentById(@PathVariable Long id) {
-        return appointmentService.getAppointmentById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    
+    // Patient gets their own appointments
+    @GetMapping("/patient/{patientId}")
+    public ResponseEntity<List<Appointment>> getAppointmentsForPatient(@PathVariable Long patientId) {
+        return ResponseEntity.ok(appointmentService.getAppointmentsForPatient(patientId));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<Appointment> updateAppointment(@PathVariable Long id, @RequestBody Appointment appointment) {
-        return ResponseEntity.ok(appointmentService.updateAppointment(id, appointment));
+    // Doctor gets their own appointments
+    @GetMapping("/doctor/{doctorId}")
+    public ResponseEntity<List<Appointment>> getAppointmentsForDoctor(@PathVariable Long doctorId) {
+        return ResponseEntity.ok(appointmentService.getAppointmentsForDoctor(doctorId));
     }
 
     @DeleteMapping("/{id}")
