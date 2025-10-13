@@ -4,6 +4,7 @@ E:\WEB-TECH\hospital-management\hospital-management-frontend\src\assets
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\components
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\filenames.txt
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\index.css
+E:\WEB-TECH\hospital-management\hospital-management-frontend\src\layouts
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\main.jsx
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\router.jsx
@@ -15,6 +16,7 @@ E:\WEB-TECH\hospital-management\hospital-management-frontend\src\components\Load
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\components\Navbar.jsx
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\components\ProtectedRoute.jsx
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\components\Sidebar.jsx
+E:\WEB-TECH\hospital-management\hospital-management-frontend\src\layouts\MainLayout.jsx
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\AppointmentsPage.jsx
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Dashboard.jsx
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\DoctorsPage.jsx

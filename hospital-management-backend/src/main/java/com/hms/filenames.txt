@@ -8,6 +8,7 @@ E:\WEB-TECH\hospital-management\hospital-management-backend\src\main\java\com\hm
 E:\WEB-TECH\hospital-management\hospital-management-backend\src\main\java\com\hms\repository
 E:\WEB-TECH\hospital-management\hospital-management-backend\src\main\java\com\hms\service
 E:\WEB-TECH\hospital-management\hospital-management-backend\src\main\java\com\hms\util
+E:\WEB-TECH\hospital-management\hospital-management-backend\src\main\java\com\hms\config\CorsConfig.java
 E:\WEB-TECH\hospital-management\hospital-management-backend\src\main\java\com\hms\config\JwtRequestFilter.java
 E:\WEB-TECH\hospital-management\hospital-management-backend\src\main\java\com\hms\config\SecurityConfig.java
 E:\WEB-TECH\hospital-management\hospital-management-backend\src\main\java\com\hms\controller\AppointmentController.java

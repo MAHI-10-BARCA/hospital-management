@@ -23,40 +23,68 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
         http
+            // ✅ Enable CORS
+            .cors(cors -> {})
+
+            // ❌ Disable CSRF for APIs
             .csrf(csrf -> csrf.disable())
+
             .authorizeHttpRequests(auth -> auth
-    .requestMatchers("/", "/auth/**").permitAll() // Public endpoints for home & login/register
-    .requestMatchers(HttpMethod.GET, "/doctors", "/doctors/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_DOCTOR")
-    .requestMatchers(HttpMethod.POST, "/doctors").hasAuthority("ROLE_ADMIN")
-    .requestMatchers(HttpMethod.PUT, "/doctors/**").hasAuthority("ROLE_ADMIN")
-    .requestMatchers(HttpMethod.DELETE, "/doctors/**").hasAuthority("ROLE_ADMIN")
+                // --- Public endpoints ---
+                .requestMatchers("/", "/auth/**").permitAll()
 
-    .requestMatchers(HttpMethod.GET, "/patients", "/patients/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_DOCTOR")
-    .requestMatchers(HttpMethod.POST, "/patients").hasAuthority("ROLE_ADMIN")
-    .requestMatchers(HttpMethod.PUT, "/patients/**").hasAuthority("ROLE_ADMIN")
-    .requestMatchers(HttpMethod.DELETE, "/patients/**").hasAuthority("ROLE_ADMIN")
+                // --- Doctor endpoints ---
+                .requestMatchers(HttpMethod.GET, "/doctors", "/doctors/**")
+                    .hasAnyAuthority("ROLE_ADMIN", "ROLE_DOCTOR")
+                .requestMatchers(HttpMethod.POST, "/doctors")
+                    .hasAuthority("ROLE_ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/doctors/**")
+                    .hasAuthority("ROLE_ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/doctors/**")
+                    .hasAuthority("ROLE_ADMIN")
 
-    .requestMatchers(HttpMethod.GET, "/appointments", "/appointments/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_DOCTOR", "ROLE_PATIENT")
-    .requestMatchers(HttpMethod.POST, "/appointments").hasAnyAuthority("ROLE_ADMIN", "ROLE_PATIENT")
-    .requestMatchers(HttpMethod.PUT, "/appointments/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_DOCTOR")
-    .requestMatchers(HttpMethod.DELETE, "/appointments/**").hasAuthority("ROLE_ADMIN")
+                // --- Patient endpoints ---
+                .requestMatchers(HttpMethod.GET, "/patients", "/patients/**")
+                    .hasAnyAuthority("ROLE_ADMIN", "ROLE_DOCTOR")
+                .requestMatchers(HttpMethod.POST, "/patients")
+                    .hasAuthority("ROLE_ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/patients/**")
+                    .hasAuthority("ROLE_ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/patients/**")
+                    .hasAuthority("ROLE_ADMIN")
 
-    .anyRequest().authenticated()
-)
+                // --- Appointment endpoints ---
+                .requestMatchers(HttpMethod.GET, "/appointments", "/appointments/**")
+                    .hasAnyAuthority("ROLE_ADMIN", "ROLE_DOCTOR", "ROLE_PATIENT", "ROLE_USER")
+                .requestMatchers(HttpMethod.POST, "/appointments")
+                    .hasAnyAuthority("ROLE_ADMIN", "ROLE_PATIENT", "ROLE_USER")
+                .requestMatchers(HttpMethod.PUT, "/appointments/**")
+                    .hasAnyAuthority("ROLE_ADMIN", "ROLE_DOCTOR")
+                .requestMatchers(HttpMethod.DELETE, "/appointments/**")
+                    .hasAuthority("ROLE_ADMIN")
 
+                // --- Everything else ---
+                .anyRequest().authenticated()
+            )
+
+            // ✅ Use stateless session (for JWT)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
+        // ✅ Add JWT filter before username-password filter
         http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
+    // --- Password encoder ---
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    // --- Authentication Manager ---
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();

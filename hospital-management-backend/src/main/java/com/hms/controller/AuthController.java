@@ -1,10 +1,8 @@
 package com.hms.controller;
 
-import com.hms.dto.JwtRequest; // We need to create this DTO
-import com.hms.dto.JwtResponse; // and this one too
-import com.hms.entity.User;
-import com.hms.repository.UserRepository;
-import com.hms.util.JwtUtil;
+import java.util.HashSet; // We need to create this DTO
+import java.util.Set; // and this one too
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -12,10 +10,16 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.HashSet;
-import java.util.Set;
+import com.hms.dto.JwtRequest;
+import com.hms.dto.JwtResponse;
+import com.hms.entity.User;
+import com.hms.repository.UserRepository;
+import com.hms.util.JwtUtil;
 
 @RestController
 @RequestMapping("/auth") // Changed from /api/auth to match your SecurityConfig
@@ -45,7 +49,7 @@ public class AuthController {
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         if (user.getRoles() == null || user.getRoles().isEmpty()) {
             Set<String> roles = new HashSet<>();
-            roles.add("USER");
+            roles.add("ROLE_USER");
             user.setRoles(roles);
         }
         userRepository.save(user);
@@ -61,7 +65,8 @@ public class AuthController {
 
         // If authentication is successful, load user details and generate a token
         final UserDetails userDetails = userDetailsService.loadUserByUsername(authenticationRequest.username());
-        final String token = jwtUtil.generateToken(userDetails);
+        String token = jwtUtil.generateToken(userDetails.getUsername());
+
 
         // Return the token in the response
         return ResponseEntity.ok(new JwtResponse(token));

@@ -1,53 +1,37 @@
-import { createBrowserRouter } from "react-router-dom";
-import ProtectedRoute from './components/ProtectedRoute'; // <-- THIS IS THE FIX
-
-// Import Layout and Pages
-import MainLayout from "./layouts/MainLayout";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import Dashboard from "./pages/Dashboard";
-import DoctorsPage from "./pages/DoctorsPage";
 import PatientsPage from "./pages/PatientsPage";
+import DoctorsPage from "./pages/DoctorsPage";
 import AppointmentsPage from "./pages/AppointmentsPage";
 import NotFound from "./pages/NotFound";
+import ProtectedRoute from "./components/ProtectedRoute";
 
-const router = createBrowserRouter([
-  {
-    path: "/login",
-    element: <LoginPage />,
-  },
-  {
-    path: "/register", // Added register route for completeness
-    element: <RegisterPage />,
-  },
-  {
-    path: "/",
-    element: <ProtectedRoute><MainLayout /></ProtectedRoute>, // Protect the main layout
-    errorElement: <NotFound />,
-    children: [
-      {
-        // Redirect root path to dashboard after login
-        index: true, 
-        element: <Dashboard />
-      },
-      {
-        path: "dashboard",
-        element: <Dashboard />,
-      },
-      {
-        path: "doctors",
-        element: <DoctorsPage />,
-      },
-      {
-        path: "patients",
-        element: <PatientsPage />,
-      },
-      {
-        path: "appointments",
-        element: <AppointmentsPage />,
-      },
-    ],
-  },
-]);
-
-export default router;
+export default function AppRouter() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route
+          path="/dashboard"
+          element={<ProtectedRoute><Dashboard /></ProtectedRoute>}
+        />
+        <Route
+          path="/patients"
+          element={<ProtectedRoute><PatientsPage /></ProtectedRoute>}
+        />
+        <Route
+          path="/doctors"
+          element={<ProtectedRoute><DoctorsPage /></ProtectedRoute>}
+        />
+        <Route
+          path="/appointments"
+          element={<ProtectedRoute><AppointmentsPage /></ProtectedRoute>}
+        />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Router>
+  );
+}
