@@ -1,23 +1,30 @@
 // src/components/Navbar.jsx
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
-export default function Navbar() {
+export default function Navbar({ pageTitle }) {
+  const navigate = useNavigate();
+
   const logout = () => {
     localStorage.removeItem("token");
-    window.location.href = "/login";
+    navigate("/login");
   };
 
   return (
-    <div className="flex items-center justify-between p-4 bg-white shadow">
-      <div className="text-xl font-bold text-blue-600">HMS</div>
+    <nav className="flex items-center justify-between px-6 py-3 bg-blue-600 shadow-md">
+      <h1 className="text-2xl font-bold text-white">{pageTitle || "🏥 HealthCare OS"}</h1>
       <div className="space-x-4">
-        <Link to="/dashboard" className="text-gray-700 hover:text-blue-600">Dashboard</Link>
-        <Link to="/patients" className="text-gray-700 hover:text-blue-600">Patients</Link>
-        <Link to="/doctors" className="text-gray-700 hover:text-blue-600">Doctors</Link>
-        <Link to="/appointments" className="text-gray-700 hover:text-blue-600">Appointments</Link>
-        <button onClick={logout} className="ml-4 bg-red-500 text-white px-3 py-1 rounded">Logout</button>
+        <Link to="/dashboard" className="text-white hover:text-gray-200">Dashboard</Link>
+        <Link to="/patients" className="text-white hover:text-gray-200">Patients</Link>
+        <Link to="/doctors" className="text-white hover:text-gray-200">Doctors</Link>
+        <Link to="/appointments" className="text-white hover:text-gray-200">Appointments</Link>
+        <button
+          onClick={logout}
+          className="ml-4 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition"
+        >
+          Logout
+        </button>
       </div>
-    </div>
+    </nav>
   );
 }

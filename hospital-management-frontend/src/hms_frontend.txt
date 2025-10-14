@@ -1,0 +1,132 @@
+App.css
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+App.jsx 
+// src/App.jsx
+import React from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import Dashboard from "./pages/Dashboard";
+import PatientsPage from "./pages/PatientsPage";
+import DoctorsPage from "./pages/DoctorsPage";
+import AppointmentsPage from "./pages/AppointmentsPage";
+import NotFound from "./pages/NotFound";
+import ProtectedRoute from "./components/ProtectedRoute";
+
+export default function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/patients" element={<ProtectedRoute><PatientsPage /></ProtectedRoute>} />
+        <Route path="/doctors" element={<ProtectedRoute><DoctorsPage /></ProtectedRoute>} />
+        <Route path="/appointments" element={<ProtectedRoute><AppointmentsPage /></ProtectedRoute>} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Router>
+  );
+}
+index.css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* small custom styles */
+body { @apply bg-gray-50; }
+.form-container { @apply max-w-md mx-auto mt-20 bg-white p-6 rounded-lg shadow-lg; }
+
+Main.jsx
+// src/main.jsx
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
+import "./index.css";
+
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+router.jsx 
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import Dashboard from "./pages/Dashboard";
+import PatientsPage from "./pages/PatientsPage";
+import DoctorsPage from "./pages/DoctorsPage";
+import AppointmentsPage from "./pages/AppointmentsPage";
+import NotFound from "./pages/NotFound";
+import ProtectedRoute from "./components/ProtectedRoute";
+
+export default function AppRouter() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route
+          path="/dashboard"
+          element={<ProtectedRoute><Dashboard /></ProtectedRoute>}
+        />
+        <Route
+          path="/patients"
+          element={<ProtectedRoute><PatientsPage /></ProtectedRoute>}
+        />
+        <Route
+          path="/doctors"
+          element={<ProtectedRoute><DoctorsPage /></ProtectedRoute>}
+        />
+        <Route
+          path="/appointments"
+          element={<ProtectedRoute><AppointmentsPage /></ProtectedRoute>}
+        />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Router>
+  );
+}

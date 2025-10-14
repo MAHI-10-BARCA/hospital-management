@@ -9,6 +9,8 @@ import DoctorsPage from "./pages/DoctorsPage";
 import AppointmentsPage from "./pages/AppointmentsPage";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
+import MainLayout from "./layouts/MainLayout";
+import Profile from "./pages/Profile";
 
 export default function App() {
   return (
@@ -17,10 +19,15 @@ export default function App() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/patients" element={<ProtectedRoute><PatientsPage /></ProtectedRoute>} />
-        <Route path="/doctors" element={<ProtectedRoute><DoctorsPage /></ProtectedRoute>} />
-        <Route path="/appointments" element={<ProtectedRoute><AppointmentsPage /></ProtectedRoute>} />
+
+        <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="patients" element={<PatientsPage />} />
+          <Route path="doctors" element={<DoctorsPage />} />
+          <Route path="appointments" element={<AppointmentsPage />} />
+          <Route path="profile" element={<Profile />} />
+        </Route>
+
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
