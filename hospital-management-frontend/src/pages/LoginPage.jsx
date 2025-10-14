@@ -1,64 +1,36 @@
-// src/pages/LoginPage.jsx
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { loginUser } from "../services/api";
+import api from "../services/api";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "../components/Toast";
 
 export default function LoginPage() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [err, setErr] = useState("");
+  const [form, setForm] = useState({ email: "", password: "" });
+  const toast = useToast();
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setErr("");
     try {
-      const res = await loginUser({ username, password });
-      const token = res.data.token;
-      if (token) {
-        localStorage.setItem("token", token);
-        navigate("/dashboard");
-      } else {
-        setErr("Login failed: no token returned");
-      }
-    } catch (error) {
-      const msg = error?.response?.data || "Invalid credentials";
-      setErr(String(msg));
+      const res = await api.post("/auth/login", form);
+      localStorage.setItem("token", res.data.token);
+      toast.push("Login successful");
+      navigate("/dashboard");
+    } catch {
+      toast.push("Invalid credentials", { type: "error" });
     }
   };
 
   return (
-    <div className="h-screen flex items-center justify-center bg-gradient-to-r from-blue-50 to-blue-100">
-      <div className="w-full max-w-md bg-white p-8 rounded-xl shadow-lg border border-gray-200">
-        <h2 className="text-3xl font-bold text-center text-blue-600 mb-6">Welcome Back 👋</h2>
-        {err && <div className="bg-red-100 text-red-700 p-2 rounded mb-4">{err}</div>}
-        <form onSubmit={handleLogin} className="space-y-4">
-          <input
-            required
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Username"
-            className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-400"
-          />
-          <input
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            type="password"
-            placeholder="Password"
-            className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-400"
-          />
-          <button className="w-full bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg font-medium transition">
-            Login
-          </button>
-        </form>
-        <p className="mt-4 text-center text-sm text-gray-600">
-          New user?{" "}
-          <Link to="/register" className="text-blue-600 hover:underline">
-            Create an account
-          </Link>
+    <div className="flex items-center justify-center h-screen bg-hospital-50">
+      <form onSubmit={handleSubmit} className="card w-96 space-y-4">
+        <h2 className="text-2xl font-semibold text-hospital-800">Login</h2>
+        <input type="email" placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="border px-3 py-2 w-full rounded" />
+        <input type="password" placeholder="Password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="border px-3 py-2 w-full rounded" />
+        <button className="btn-primary w-full">Login</button>
+        <p className="text-sm text-center">
+          Don’t have an account? <a href="/register" className="text-hospital-600 underline">Register</a>
         </p>
-      </div>
+      </form>
     </div>
   );
 }

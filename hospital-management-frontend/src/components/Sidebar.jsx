@@ -1,49 +1,27 @@
-import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+// src/components/Sidebar.jsx
+import React from "react";
+import { NavLink } from "react-router-dom";
+import { FiHome, FiUsers, FiCalendar, FiUserCheck } from "react-icons/fi";
 
-// A simple placeholder logo icon
-const LogoIcon = () => (
-  <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-  </svg>
+const Item = ({ to, children }) => (
+  <NavLink to={to} className={({isActive}) => `flex items-center gap-3 px-4 py-3 rounded-lg ${isActive ? 'bg-hospital-500 text-white' : 'text-gray-600 hover:bg-gray-50'}`}>
+    {children}
+  </NavLink>
 );
 
 export default function Sidebar() {
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    navigate('/login');
-  };
-
-  const baseLinkStyle = "flex items-center px-4 py-3 text-gray-300 hover:bg-blue-700 hover:text-white transition-colors duration-200 rounded-lg";
-  const activeLinkStyle = "bg-blue-700 text-white font-bold";
-
   return (
-    <aside className="bg-gray-800 text-white w-64 min-h-screen flex flex-col p-4">
-      <div className="px-4 py-6 text-center border-b border-gray-700">
-        <LogoIcon />
-        <h1 className="text-xl font-bold mt-2">HealthCare OS</h1>
+    <aside className="bg-white w-64 border-r hidden md:block">
+      <div className="p-4 border-b">
+        <div className="text-hospital-500 font-bold text-lg">HealthCare OS</div>
+        <div className="text-xs text-gray-400">Hospital Management</div>
       </div>
-      <nav className="flex-grow mt-6 space-y-2">
-        <NavLink to="/dashboard" className={({ isActive }) => `${baseLinkStyle} ${isActive ? activeLinkStyle : ''}`}>
-          <span className="ml-3">Dashboard</span>
-        </NavLink>
-        <NavLink to="/doctors" className={({ isActive }) => `${baseLinkStyle} ${isActive ? activeLinkStyle : ''}`}>
-          <span className="ml-3">Doctors</span>
-        </NavLink>
-        <NavLink to="/patients" className={({ isActive }) => `${baseLinkStyle} ${isActive ? activeLinkStyle : ''}`}>
-          <span className="ml-3">Patients</span>
-        </NavLink>
-        <NavLink to="/appointments" className={({ isActive }) => `${baseLinkStyle} ${isActive ? activeLinkStyle : ''}`}>
-          <span className="ml-3">Appointments</span>
-        </NavLink>
+      <nav className="p-4 flex flex-col gap-2">
+        <Item to="/dashboard"><FiHome /> Dashboard</Item>
+        <Item to="/patients"><FiUsers /> Patients</Item>
+        <Item to="/doctors"><FiUserCheck /> Doctors</Item>
+        <Item to="/appointments"><FiCalendar /> Appointments</Item>
       </nav>
-      <div className="mt-auto">
-        <button onClick={handleLogout} className={`${baseLinkStyle} w-full`}>
-          <span className="ml-3">Logout</span>
-        </button>
-      </div>
     </aside>
   );
 }

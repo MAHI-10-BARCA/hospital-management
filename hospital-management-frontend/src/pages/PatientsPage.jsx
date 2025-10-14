@@ -1,142 +1,102 @@
-// src/pages/PatientsPage.jsx
 import React, { useEffect, useState } from "react";
-import Navbar from "../components/Navbar";
-import Modal from "../components/Modal";
-import ConfirmDialog from "../components/ConfirmDialog";
-import {
-  getPatients,
-  createPatient,
-  updatePatient,
-  deletePatient,
-} from "../services/api";
+import api from "../services/api";
+import { useToast } from "../components/Toast";
+import SearchBar from "../components/SearchBar";
 
 export default function PatientsPage() {
+  const toast = useToast();
   const [patients, setPatients] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  const [showModal, setShowModal] = useState(false);
-  const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: "", age: "", gender: "Male" });
-
-  const [confirm, setConfirm] = useState({ show: false, id: null });
+  const [query, setQuery] = useState("");
+  const [newPatient, setNewPatient] = useState({ name: "", age: "" });
 
   const load = async () => {
-    setLoading(true);
     try {
-      const res = await getPatients();
+      const res = await api.get("/patients");
       setPatients(res.data || []);
-    } catch (err) {
-      console.error("Failed to load patients", err);
-    } finally {
-      setLoading(false);
+    } catch {
+      toast.push("Failed to load patients", { type: "error" });
     }
   };
 
   useEffect(() => { load(); }, []);
 
-  const openAdd = () => {
-    setEditing(null);
-    setForm({ name: "", age: "", gender: "Male" });
-    setShowModal(true);
-  };
-
-  const openEdit = (p) => {
-    setEditing(p);
-    setForm({ name: p.name || "", age: p.age || "", gender: p.gender || "Male" });
-    setShowModal(true);
-  };
-
-  const submit = async (e) => {
-    e?.preventDefault();
+  const handleAdd = async () => {
+    if (!newPatient.name.trim()) return toast.push("Enter patient name");
     try {
-      if (editing) {
-        await updatePatient(editing.id, { ...form, age: Number(form.age) });
-      } else {
-        await createPatient({ ...form, age: Number(form.age) });
-      }
-      setShowModal(false);
+      await api.post("/patients", newPatient);
+      toast.push("Patient added");
+      setNewPatient({ name: "", age: "" });
       load();
-    } catch (err) {
-      alert("Save failed: " + (err?.response?.data || err.message));
+    } catch {
+      toast.push("Add failed", { type: "error" });
     }
   };
 
   const handleDelete = async (id) => {
+    if (!confirm("Delete patient?")) return;
     try {
-      await deletePatient(id);
+      await api.delete(`/patients/${id}`);
+      toast.push("Patient removed");
       load();
-    } catch (err) {
-      alert("Delete failed");
+    } catch {
+      toast.push("Delete failed", { type: "error" });
     }
   };
 
-  return (
-    <>
-      <Navbar pageTitle="Patients" />
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-semibold">Patients</h2>
-          <div>
-            <button onClick={openAdd} className="bg-blue-600 text-white px-4 py-2 rounded">+ Add Patient</button>
-          </div>
-        </div>
+  const filtered = patients.filter(p =>
+    p.name?.toLowerCase().includes(query.toLowerCase())
+  );
 
-        <div className="bg-white rounded shadow overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="p-3 text-left">ID</th>
-                <th className="p-3 text-left">Name</th>
-                <th className="p-3 text-left">Age</th>
-                <th className="p-3 text-left">Gender</th>
-                <th className="p-3 text-left">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan="5" className="p-4 text-center">Loading...</td></tr>
-              ) : patients.length === 0 ? (
-                <tr><td colSpan="5" className="p-4 text-center">No patients yet</td></tr>
-              ) : patients.map((p) => (
-                <tr key={p.id} className="border-t">
-                  <td className="p-3">{p.id}</td>
-                  <td className="p-3">{p.name}</td>
-                  <td className="p-3">{p.age}</td>
-                  <td className="p-3">{p.gender}</td>
-                  <td className="p-3">
-                    <button onClick={() => openEdit(p)} className="mr-2 px-3 py-1 rounded border">Edit</button>
-                    <button onClick={() => setConfirm({ show: true, id: p.id })} className="px-3 py-1 rounded bg-red-500 text-white">Delete</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+  return (
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-semibold text-hospital-800">Patients</h2>
+        <SearchBar value={query} onChange={setQuery} />
       </div>
 
-      <Modal show={showModal} onClose={() => setShowModal(false)} title={editing ? "Edit Patient" : "Add Patient"}>
-        <form onSubmit={submit} className="space-y-3">
-          <label className="block"><div className="text-sm mb-1">Name</div>
-            <input value={form.name} onChange={(e)=>setForm({...form, name: e.target.value})} className="w-full border p-2 rounded" required />
-          </label>
-          <label className="block"><div className="text-sm mb-1">Age</div>
-            <input type="number" value={form.age} onChange={(e)=>setForm({...form, age: e.target.value})} className="w-full border p-2 rounded" required />
-          </label>
-          <label className="block"><div className="text-sm mb-1">Gender</div>
-            <select value={form.gender} onChange={(e)=>setForm({...form, gender: e.target.value})} className="w-full border p-2 rounded">
-              <option>Male</option>
-              <option>Female</option>
-              <option>Other</option>
-            </select>
-          </label>
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={()=>setShowModal(false)} className="px-3 py-1 rounded border">Cancel</button>
-            <button type="submit" className="px-3 py-1 rounded bg-blue-600 text-white">{editing ? "Save" : "Create"}</button>
-          </div>
-        </form>
-      </Modal>
+      <div className="card mb-4 flex flex-wrap gap-2">
+        <input
+          placeholder="Name"
+          value={newPatient.name}
+          onChange={(e) => setNewPatient({ ...newPatient, name: e.target.value })}
+          className="border px-3 py-2 rounded"
+        />
+        <input
+          placeholder="Age"
+          type="number"
+          value={newPatient.age}
+          onChange={(e) => setNewPatient({ ...newPatient, age: e.target.value })}
+          className="border px-3 py-2 rounded"
+        />
+        <button onClick={handleAdd} className="btn-primary">Add</button>
+      </div>
 
-      <ConfirmDialog show={confirm.show} onClose={() => setConfirm({show:false,id:null})} onConfirm={() => handleDelete(confirm.id)} message="Delete this patient?" />
-    </>
+      <div className="card overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left border-b">
+              <th className="p-2">#</th>
+              <th className="p-2">Name</th>
+              <th className="p-2">Age</th>
+              <th className="p-2">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((p, i) => (
+              <tr key={p.id} className="border-b hover:bg-slate-50">
+                <td className="p-2">{i + 1}</td>
+                <td className="p-2">{p.name}</td>
+                <td className="p-2">{p.age}</td>
+                <td className="p-2">
+                  <button onClick={() => handleDelete(p.id)} className="text-red-600 text-sm hover:underline">
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
