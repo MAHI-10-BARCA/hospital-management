@@ -1,45 +1,39 @@
-// src/services/api.js
-import axios from "axios";
+import axios from 'axios';
 
-const API_URL = "http://localhost:8080";
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+// Request interceptor for adding auth token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
-// AUTH
-export const registerUser = (data) => api.post("/auth/register", data);
-export const loginUser = (data) => api.post("/auth/login", data);
-
-// USERS / PROFILE
-export const getProfile = () => api.get("/api/profile/me");
-export const updateProfile = (payload) => api.put("/api/profile/me", payload);
-
-// DOCTORS
-export const getDoctors = () => api.get("/doctors");
-export const createDoctor = (payload) => api.post("/doctors", payload);
-export const updateDoctor = (id, payload) => api.put(`/doctors/${id}`, payload);
-export const deleteDoctor = (id) => api.delete(`/doctors/${id}`);
-
-// PATIENTS
-export const getPatients = () => api.get("/patients");
-export const createPatient = (payload) => api.post("/patients", payload);
-export const updatePatient = (id, payload) => api.put(`/patients/${id}`, payload);
-export const deletePatient = (id) => api.delete(`/patients/${id}`);
-
-// APPOINTMENTS
-export const getAppointments = () => api.get("/api/appointments");
-export const createAppointment = (payload) => api.post("/api/appointments", payload);
-export const deleteAppointment = (id) => api.delete(`/api/appointments/${id}`);
-
-// SCHEDULES (if your backend supports them)
-export const getAvailableSchedulesForDoctor = (doctorId) =>
-  api.get(`/api/schedules/doctor/${doctorId}/available`);
+// Response interceptor for handling errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
 
 export default api;

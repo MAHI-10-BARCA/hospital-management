@@ -3,9 +3,12 @@ package com.hms.util;
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List; // ✅ ADDED
 import java.util.Map;
 import java.util.function.Function;
 
+import org.springframework.security.core.GrantedAuthority; // ✅ ADDED
+import org.springframework.security.core.userdetails.UserDetails; // ✅ ADDED
 import org.springframework.stereotype.Component;
 
 import io.jsonwebtoken.Claims;
@@ -16,11 +19,17 @@ import io.jsonwebtoken.security.Keys;
 @Component
 public class JwtUtil {
 
-    // ✅ Securely generate a 512-bit key for HS512
+    // ✅ Keep same key but stable key recommended for production
     private final Key SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS512);
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
+    }
+
+    // ✅ Added roles extraction
+    public List<String> extractRoles(String token) {
+        Claims claims = extractAllClaims(token);
+        return claims.get("roles", List.class);
     }
 
     public Date extractExpiration(String token) {
@@ -44,9 +53,13 @@ public class JwtUtil {
         return extractExpiration(token).before(new Date());
     }
 
-    public String generateToken(String username) {
+    // 🔧 CHANGED: Now includes roles from userDetails
+    public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
-        return createToken(claims, username);
+        claims.put("roles", userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .toList());
+        return createToken(claims, userDetails.getUsername());
     }
 
     private String createToken(Map<String, Object> claims, String subject) {

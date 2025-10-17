@@ -1,42 +1,43 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-/* Custom global styles */
-:root{
-  --primary: theme(colors.hospital.500);
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 body {
-  @apply bg-gradient-to-br from-white via-slate-50 to-slate-100 min-h-screen text-gray-800;
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  background-color: #f5f5f5;
+  line-height: 1.6;
 }
 
-/* container center */
-#root { max-width: 1300px; margin: 0 auto; }
-
-/* Card */
-.card {
-  @apply bg-white rounded-2xl p-5 shadow-soft-lg;
+#root {
+  min-height: 100vh;
 }
 
-/* Buttons */
-.btn-primary {
-  @apply bg-hospital-500 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-hospital-600 transition;
-}
-.btn-outline {
-  @apply border border-gray-200 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-50;
-}
-.small {
-  @apply px-2 py-1 text-sm;
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
 }
 
-/* Toast wrapper */
-.toast-wrap {
-  @apply fixed right-4 top-6 z-50 flex flex-col gap-3;
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
 }
 
-/* Small responsive tweaks */
-@media (max-width: 768px) {
-  .sidebar-collapsed { display: none; }
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Loading animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
 }
