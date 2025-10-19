@@ -25,6 +25,7 @@ import LoadingSpinner from './components/Common/LoadingSpinner';
 import ProtectedRoute from './components/Common/ProtectedRoute';
 import SchedulesList from './pages/Schedules/SchedulesList';
 import theme from './styles/theme';
+import { medglassTheme } from './styles/medglass-theme';
 
 const queryClient = new QueryClient({
   defaultOptions: {

@@ -37,12 +37,13 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
 import { appointmentService } from '../../services/appointmentService';
-import { prescriptionService } from '../../services/prescriptionService'; // ✅ ADDED
+import { prescriptionService } from '../../services/prescriptionService';
 import { useAuth } from '../../contexts/AuthContext';
 import { hasPermission } from '../../utils/helpers';
 import LoadingSpinner from '../../components/Common/LoadingSpinner';
 import ConfirmDialog from '../../components/Common/ConfirmDialog';
 import PrescriptionForm from '../Prescription/PrescriptionForm';
+import PrescriptionView from '../Prescription/PrescriptionView';
 import { 
   formatDate, 
   formatTime, 
@@ -60,11 +61,14 @@ const AppointmentsList = () => {
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [prescriptionDialogOpen, setPrescriptionDialogOpen] = useState(false);
+  const [prescriptionViewOpen, setPrescriptionViewOpen] = useState(false);
   const [appointmentToDelete, setAppointmentToDelete] = useState(null);
   const [appointmentForStatus, setAppointmentForStatus] = useState(null);
   const [appointmentForEdit, setAppointmentForEdit] = useState(null);
   const [selectedAppointmentForPrescription, setSelectedAppointmentForPrescription] = useState(null);
+  const [selectedAppointmentForView, setSelectedAppointmentForView] = useState(null);
   const [existingPrescription, setExistingPrescription] = useState(null);
+  const [prescriptionToView, setPrescriptionToView] = useState(null);
   const [newStatus, setNewStatus] = useState('');
   const [editReason, setEditReason] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -86,7 +90,6 @@ const AppointmentsList = () => {
       const data = await appointmentService.getAll();
       console.log('📅 Raw appointments data:', data);
       
-      // Map data to ensure consistent structure
       const mappedAppointments = Array.isArray(data) ? data.map(mapAppointmentData) : [];
       console.log('📅 Mapped appointments:', mappedAppointments);
       
@@ -100,16 +103,44 @@ const AppointmentsList = () => {
     }
   };
 
+  const handlePatientViewPrescription = async (appointment) => {
+    try {
+      setSelectedAppointmentForView(appointment);
+      console.log('👤 Patient viewing prescription for appointment:', appointment.id);
+      
+      enqueueSnackbar('Loading prescription...', { variant: 'info', autoHideDuration: 2000 });
+      
+      const prescription = await prescriptionService.getByAppointmentForPatient(appointment.id);
+      
+      if (prescription) {
+        setPrescriptionToView(prescription);
+        setPrescriptionViewOpen(true);
+        console.log('📄 Prescription found and opened for viewing:', prescription);
+        enqueueSnackbar('Prescription loaded successfully', { variant: 'success' });
+      } else {
+        console.log('❌ No prescription found for this appointment');
+        enqueueSnackbar('No prescription found for this completed appointment', { variant: 'info' });
+      }
+    } catch (error) {
+      console.error('❌ Error fetching prescription:', error);
+      if (error.response?.status === 403) {
+        enqueueSnackbar('Prescription not available yet or you are not authorized to view it', { variant: 'warning' });
+      } else if (error.response?.status === 404) {
+        enqueueSnackbar('No prescription found for this appointment', { variant: 'info' });
+      } else {
+        enqueueSnackbar('Failed to load prescription. Please try again.', { variant: 'error' });
+      }
+    }
+  };
+
   const handlePrescriptionClick = async (appointment) => {
     try {
       setSelectedAppointmentForPrescription(appointment);
       
-      // Check if prescription already exists
       const prescription = await prescriptionService.getByAppointment(appointment.id);
       setExistingPrescription(prescription);
       setPrescriptionDialogOpen(true);
     } catch (error) {
-      // No prescription exists, create new one
       console.log('No existing prescription found, creating new one');
       setExistingPrescription(null);
       setPrescriptionDialogOpen(true);
@@ -205,7 +236,6 @@ const AppointmentsList = () => {
     if (hasPermission(user, 'manage_appointments')) {
       return baseOptions;
     } else if (hasPermission(user, 'manage_schedules')) {
-      // Doctors can update to these statuses
       return [APPOINTMENT_STATUS.CONFIRMED, APPOINTMENT_STATUS.IN_PROGRESS, APPOINTMENT_STATUS.COMPLETED, APPOINTMENT_STATUS.CANCELLED];
     }
     
@@ -235,11 +265,13 @@ const AppointmentsList = () => {
     );
   };
 
+  const isPatient = user?.roles?.includes('ROLE_PATIENT');
+  const isDoctor = user?.roles?.includes('ROLE_DOCTOR');
+
   if (loading) return <LoadingSpinner />;
 
   return (
     <Box>
-      {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Typography variant="h4" component="h1" fontWeight="bold">
           Appointments
@@ -256,7 +288,6 @@ const AppointmentsList = () => {
         )}
       </Box>
 
-      {/* Search and Filter Bar */}
       <Card sx={{ mb: 3, borderRadius: 3 }}>
         <CardContent>
           <Grid container spacing={2} alignItems="center">
@@ -301,7 +332,6 @@ const AppointmentsList = () => {
         </Alert>
       )}
 
-      {/* Appointments List */}
       <Grid container spacing={3}>
         {filteredAppointments.map((appointment) => (
           <Grid item xs={12} key={appointment.id}>
@@ -319,7 +349,6 @@ const AppointmentsList = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <Box sx={{ flexGrow: 1 }}>
-                    {/* Header with Patient and Status */}
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                       <Box>
                         <Typography variant="h6" component="h2" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -345,7 +374,6 @@ const AppointmentsList = () => {
                       </Box>
                     </Box>
 
-                    {/* Appointment Details */}
                     <Grid container spacing={2}>
                       <Grid item xs={12} md={6}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
@@ -370,6 +398,19 @@ const AppointmentsList = () => {
                         </Typography>
                       </Grid>
                     </Grid>
+
+                    {isPatient && appointment.status === 'COMPLETED' && (
+                      <Box sx={{ mt: 2 }}>
+                        <Button
+                          variant="contained"
+                          startIcon={<DescriptionIcon />}
+                          onClick={() => handlePatientViewPrescription(appointment)}
+                          size="small"
+                        >
+                          View Prescription
+                        </Button>
+                      </Box>
+                    )}
                   </Box>
                 </Box>
               </CardContent>
@@ -392,7 +433,6 @@ const AppointmentsList = () => {
         </Card>
       )}
 
-      {/* Action Menu */}
       <Menu
         anchorEl={menuAnchor}
         open={Boolean(menuAnchor)}
@@ -405,8 +445,7 @@ const AppointmentsList = () => {
           <EditIcon sx={{ mr: 1 }} /> Edit Reason
         </MenuItem>
         
-        {/* Prescription Button for COMPLETED or IN_PROGRESS appointments */}
-        {(selectedAppointment?.status === 'COMPLETED' || selectedAppointment?.status === 'IN_PROGRESS') && (
+        {isDoctor && (selectedAppointment?.status === 'COMPLETED' || selectedAppointment?.status === 'IN_PROGRESS') && (
           <MenuItem onClick={() => handlePrescriptionClick(selectedAppointment)}>
             <DescriptionIcon sx={{ mr: 1 }} /> 
             {existingPrescription ? 'View Prescription' : 'Create Prescription'}
@@ -420,7 +459,6 @@ const AppointmentsList = () => {
         )}
       </Menu>
 
-      {/* Status Update Dialog */}
       <Dialog open={statusDialogOpen} onClose={() => setStatusDialogOpen(false)}>
         <DialogTitle>Update Appointment Status</DialogTitle>
         <DialogContent>
@@ -464,7 +502,6 @@ const AppointmentsList = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Edit Reason Dialog */}
       <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Edit Appointment Reason</DialogTitle>
         <DialogContent>
@@ -500,7 +537,6 @@ const AppointmentsList = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Prescription Dialog */}
       <PrescriptionForm
         open={prescriptionDialogOpen}
         onClose={(refresh) => {
@@ -515,7 +551,17 @@ const AppointmentsList = () => {
         prescription={existingPrescription}
       />
 
-      {/* Delete Confirmation Dialog */}
+      <PrescriptionView
+        open={prescriptionViewOpen}
+        onClose={() => {
+          setPrescriptionViewOpen(false);
+          setSelectedAppointmentForView(null);
+          setPrescriptionToView(null);
+        }}
+        prescription={prescriptionToView}
+        appointment={selectedAppointmentForView}
+      />
+
       <ConfirmDialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}

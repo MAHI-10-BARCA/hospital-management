@@ -1,15 +1,27 @@
 package com.hms.service;
 
-import com.hms.dto.*;
-import com.hms.entity.*;
-import com.hms.repository.*;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.hms.dto.MedicationDTO;
+import com.hms.dto.PrescriptionRequestDTO;
+import com.hms.dto.PrescriptionResponseDTO;
+import com.hms.entity.Appointment;
+import com.hms.entity.Doctor;
+import com.hms.entity.Medication;
+import com.hms.entity.Patient;
+import com.hms.entity.Prescription;
+import com.hms.entity.User;
+import com.hms.repository.AppointmentRepository;
+import com.hms.repository.DoctorRepository;
+import com.hms.repository.MedicationRepository;
+import com.hms.repository.PatientRepository;
+import com.hms.repository.PrescriptionRepository;
+import com.hms.repository.UserRepository;
 
 @Service
 public class PrescriptionService {
@@ -83,6 +95,81 @@ public class PrescriptionService {
         return convertToDTO(prescription);
     }
 
+    // ✅ ADDED: Get prescription for patient (with security check)
+    public PrescriptionResponseDTO getPrescriptionForPatient(Long prescriptionId, String username) {
+        Prescription prescription = prescriptionRepository.findById(prescriptionId)
+                .orElseThrow(() -> new RuntimeException("Prescription not found"));
+
+        // Check if the current user is the patient of this prescription
+        User currentUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        Patient patient = patientRepository.findByUser(currentUser)
+                .orElseThrow(() -> new RuntimeException("Patient profile not found"));
+
+        if (!prescription.getAppointment().getPatient().getId().equals(patient.getId())) {
+            throw new RuntimeException("You can only view your own prescriptions");
+        }
+
+        // Check if appointment is completed
+        if (!"COMPLETED".equals(prescription.getAppointment().getStatus())) {
+            throw new RuntimeException("Prescription is not available until appointment is completed");
+        }
+
+        return convertToDTO(prescription);
+    }
+
+    // ✅ ADDED: Get all prescriptions for current patient
+    public List<PrescriptionResponseDTO> getPatientPrescriptions(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        Patient patient = patientRepository.findByUser(user)
+                .orElseThrow(() -> new RuntimeException("Patient profile not found"));
+
+        // Get prescriptions only for completed appointments
+        List<Prescription> prescriptions = prescriptionRepository.findByAppointmentPatientIdAndAppointmentStatus(
+            patient.getId(), "COMPLETED");
+        
+        return prescriptions.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    // ✅ ADDED: Get prescription by appointment ID for patient
+    public PrescriptionResponseDTO getPrescriptionByAppointmentForPatient(Long appointmentId, String username) {
+        System.out.println("🔍 Looking for prescription for appointment: " + appointmentId + " for patient: " + username);
+        
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        Patient patient = patientRepository.findByUser(user)
+                .orElseThrow(() -> new RuntimeException("Patient profile not found"));
+
+        System.out.println("👤 Patient found: " + patient.getName() + " (ID: " + patient.getId() + ")");
+
+        Prescription prescription = prescriptionRepository.findByAppointmentId(appointmentId)
+                .orElseThrow(() -> {
+                    System.out.println("❌ No prescription found for appointment: " + appointmentId);
+                    return new RuntimeException("Prescription not found");
+                });
+
+        System.out.println("📄 Prescription found for appointment: " + appointmentId);
+        System.out.println("🔒 Checking authorization...");
+
+        // Security check - patient can only view their own prescriptions
+        if (!prescription.getAppointment().getPatient().getId().equals(patient.getId())) {
+            System.out.println("🚫 Authorization failed: Patient " + patient.getId() + " trying to access prescription for patient " + prescription.getAppointment().getPatient().getId());
+            throw new RuntimeException("You can only view your own prescriptions");
+        }
+
+        // Check if appointment is completed
+        if (!"COMPLETED".equals(prescription.getAppointment().getStatus())) {
+            System.out.println("⏳ Prescription not available - Appointment status: " + prescription.getAppointment().getStatus());
+            throw new RuntimeException("Prescription is not available until appointment is completed");
+        }
+
+        System.out.println("✅ Authorization successful, returning prescription");
+        return convertToDTO(prescription);
+    }
+
     public List<PrescriptionResponseDTO> getPrescriptionsForPatient(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -106,6 +193,7 @@ public class PrescriptionService {
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
+    
 
     public Prescription updatePrescription(Long id, PrescriptionRequestDTO requestDTO, String username) {
         Prescription prescription = prescriptionRepository.findById(id)

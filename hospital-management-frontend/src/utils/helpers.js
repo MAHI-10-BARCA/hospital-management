@@ -1,12 +1,27 @@
+// utils/helpers.js
 import dayjs from 'dayjs';
 
-// ✅ IMPROVED: Date formatting with null checks
 export const formatDate = (date) => {
   if (!date) return 'Not scheduled';
   try {
-    return dayjs(date).format('DD/MM/YYYY');
+    let dateObj;
+    if (typeof date === 'string') {
+      dateObj = new Date(date);
+    } else if (date instanceof Date) {
+      dateObj = date;
+    } else {
+      return 'Invalid Date';
+    }
+    
+    if (isNaN(dateObj.getTime())) return 'Invalid Date';
+    
+    return dateObj.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
   } catch (error) {
-    console.error('Date formatting error:', error);
+    console.error('Date formatting error:', error, date);
     return 'Invalid Date';
   }
 };
@@ -14,18 +29,48 @@ export const formatDate = (date) => {
 export const formatTime = (time) => {
   if (!time) return 'Not scheduled';
   try {
-    return dayjs(time, 'HH:mm:ss').format('hh:mm A');
+    let timeStr = time;
+    
+    if (typeof time === 'object') {
+      timeStr = time.toString();
+    }
+    
+    const [hours, minutes] = timeStr.split(':');
+    const date = new Date();
+    date.setHours(parseInt(hours), parseInt(minutes), 0);
+    
+    if (isNaN(date.getTime())) return timeStr;
+    
+    return date.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: true 
+    });
   } catch (error) {
-    console.error('Time formatting error:', error);
-    return 'Invalid Time';
+    console.error('Time formatting error:', error, time);
+    return time;
   }
 };
 
-export const formatDateTime = (date, time) => {
-  return `${formatDate(date)} ${formatTime(time)}`;
+export const formatDateTime = (dateTime) => {
+  if (!dateTime) return 'Unknown';
+  try {
+    const date = new Date(dateTime);
+    if (isNaN(date.getTime())) return 'Invalid Date';
+    
+    return date.toLocaleString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch (error) {
+    console.error('DateTime formatting error:', error, dateTime);
+    return 'Invalid Date';
+  }
 };
 
-// ✅ IMPROVED: Complete status management
 export const APPOINTMENT_STATUS = {
   SCHEDULED: 'SCHEDULED',
   CONFIRMED: 'CONFIRMED',
@@ -67,7 +112,6 @@ export const getStatusIcon = (status) => {
   return statusIcons[status] || '📋';
 };
 
-// User roles constants
 export const USER_ROLES = {
   ADMIN: 'ROLE_ADMIN',
   DOCTOR: 'ROLE_DOCTOR',
@@ -75,13 +119,11 @@ export const USER_ROLES = {
   USER: 'ROLE_USER'
 };
 
-// Check if user has a specific role
 export const hasRole = (user, role) => {
   if (!user || !user.roles) return false;
   return user.roles.includes(role);
 };
 
-// Get user's main role for dashboard routing
 export const getUserMainRole = (user) => {
   if (!user || !user.roles) return USER_ROLES.USER;
   
@@ -104,24 +146,19 @@ export const getUserInitials = (name) => {
     .toUpperCase() || 'U';
 };
 
-// Check if user has permission for specific actions
 export const hasPermission = (user, permission) => {
   if (!user || !user.roles) return false;
   
   const permissions = {
-    // View permissions
     'view_dashboard': [USER_ROLES.ADMIN, USER_ROLES.DOCTOR, USER_ROLES.PATIENT, USER_ROLES.USER],
     'view_doctors': [USER_ROLES.ADMIN, USER_ROLES.DOCTOR, USER_ROLES.PATIENT, USER_ROLES.USER],
     'view_patients': [USER_ROLES.ADMIN, USER_ROLES.DOCTOR],
     'view_appointments': [USER_ROLES.ADMIN, USER_ROLES.DOCTOR, USER_ROLES.PATIENT, USER_ROLES.USER],
-    
-    // Management permissions
     'manage_doctors': [USER_ROLES.ADMIN],
     'manage_patients': [USER_ROLES.ADMIN, USER_ROLES.DOCTOR],
     'manage_appointments': [USER_ROLES.ADMIN, USER_ROLES.DOCTOR],
     'book_appointments': [USER_ROLES.ADMIN, USER_ROLES.PATIENT, USER_ROLES.USER],
     'manage_schedules': [USER_ROLES.ADMIN, USER_ROLES.DOCTOR],
-    // Admin only
     'manage_users': [USER_ROLES.ADMIN],
     'view_reports': [USER_ROLES.ADMIN],
   };
@@ -163,22 +200,27 @@ export const URGENCY_LEVELS = [
   { value: 'EMERGENCY', label: 'Emergency' }
 ];
 
-// ✅ ADDED: Data mapping helper for appointments
 export const mapAppointmentData = (appointment) => {
-  // Handle both entity and DTO formats
-  return {
+  const mapped = {
     id: appointment.id,
     patientId: appointment.patient?.id || appointment.patientId,
-    patientName: appointment.patient?.name || appointment.patientName,
+    patientName: appointment.patient?.name || appointment.patientName || 'Unknown Patient',
     doctorId: appointment.doctor?.id || appointment.doctorId,
-    doctorName: appointment.doctor?.name || appointment.doctorName,
-    doctorSpecialization: appointment.doctor?.specialization || appointment.doctorSpecialization,
+    doctorName: appointment.doctor?.name || appointment.doctorName || 'Unknown Doctor',
+    doctorSpecialization: appointment.doctor?.specialization || appointment.doctorSpecialization || 'General',
     scheduleId: appointment.schedule?.id || appointment.scheduleId,
-    appointmentDate: appointment.schedule?.availableDate || appointment.appointmentDate,
-    startTime: appointment.schedule?.startTime || appointment.startTime,
+    appointmentDate: appointment.schedule?.availableDate || 
+                    appointment.appointmentDate || 
+                    appointment.appointmentDate,
+    startTime: appointment.schedule?.startTime || 
+               appointment.startTime || 
+               appointment.appointmentTime,
     endTime: appointment.schedule?.endTime || appointment.endTime,
-    status: appointment.status,
-    reason: appointment.reason,
+    status: appointment.status || 'SCHEDULED',
+    reason: appointment.reason || 'Regular checkup',
     createdDate: appointment.createdDate
   };
+
+  console.log('📅 Mapped appointment:', mapped);
+  return mapped;
 };

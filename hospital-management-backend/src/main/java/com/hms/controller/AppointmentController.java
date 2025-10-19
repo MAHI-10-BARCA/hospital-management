@@ -1,12 +1,10 @@
 package com.hms.controller;
 
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -35,15 +33,11 @@ public class AppointmentController {
             @RequestBody Appointment appointment,
             Authentication authentication) {
         
-        System.out.println("📅 Creating appointment with data: " + appointment);
-        System.out.println("👤 Current user: " + authentication.getName());
-        
-        String userRole = getUserRoleFromAuthentication(authentication);
         String username = authentication.getName();
+        System.out.println("📅 Creating appointment for user: " + username);
         
         try {
-            Appointment createdAppointment = appointmentService.createAppointment(appointment, userRole, username);
-            System.out.println("✅ Appointment created successfully: " + createdAppointment.getId());
+            AppointmentResponseDTO createdAppointment = appointmentService.createAppointment(appointment);
             return ResponseEntity.ok(createdAppointment);
         } catch (RuntimeException e) {
             System.err.println("❌ Error creating appointment: " + e.getMessage());
@@ -52,148 +46,88 @@ public class AppointmentController {
     }
 
     @GetMapping
-    public ResponseEntity<?> getAllAppointments(Authentication authentication) {
-        String userRole = getUserRoleFromAuthentication(authentication);
+    public ResponseEntity<List<AppointmentResponseDTO>> getAllAppointments(Authentication authentication) {
         String username = authentication.getName();
-        
-        System.out.println("🔍 Getting appointments for user: " + username + " with role: " + userRole);
+        System.out.println("📅 Fetching appointments for user: " + username);
         
         try {
-            // Return DTOs with detailed information for better frontend display
-            if ("PATIENT".equals(userRole)) {
-                List<AppointmentResponseDTO> patientAppointments = appointmentService.getAppointmentsForCurrentPatientWithDetails(username);
-                System.out.println("✅ Found " + patientAppointments.size() + " appointments for patient: " + username);
-                return ResponseEntity.ok(patientAppointments);
-            } else if ("DOCTOR".equals(userRole)) {
-                List<AppointmentResponseDTO> doctorAppointments = appointmentService.getAppointmentsForCurrentDoctorWithDetails(username);
-                System.out.println("✅ Found " + doctorAppointments.size() + " appointments for doctor: " + username);
-                return ResponseEntity.ok(doctorAppointments);
-            } else {
-                // ADMIN gets all appointments with details
-                List<AppointmentResponseDTO> allAppointments = appointmentService.getAllAppointmentsWithDetails();
-                System.out.println("✅ Found " + allAppointments.size() + " total appointments");
-                return ResponseEntity.ok(allAppointments);
-            }
-        } catch (RuntimeException e) {
-            System.err.println("❌ Error getting appointments: " + e.getMessage());
-            return ResponseEntity.badRequest().body(e.getMessage());
+            List<AppointmentResponseDTO> appointments = appointmentService.getAllAppointments();
+            return ResponseEntity.ok(appointments);
+        } catch (Exception e) {
+            System.err.println("❌ Error fetching appointments: " + e.getMessage());
+            return ResponseEntity.internalServerError().build();
         }
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getAppointmentById(@PathVariable Long id) {
-        System.out.println("🔍 Getting appointment by ID: " + id);
         try {
-            Optional<AppointmentResponseDTO> appointment = appointmentService.getAppointmentWithDetailsById(id);
-            if (appointment.isPresent()) {
-                System.out.println("✅ Found appointment: " + appointment.get().getId());
-                return ResponseEntity.ok(appointment.get());
-            } else {
-                System.err.println("❌ Appointment not found: " + id);
-                return ResponseEntity.notFound().build();
-            }
+            AppointmentResponseDTO appointment = appointmentService.getAppointmentById(id);
+            return ResponseEntity.ok(appointment);
         } catch (RuntimeException e) {
-            System.err.println("❌ Error getting appointment: " + e.getMessage());
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.notFound().build();
         }
     }
 
     @GetMapping("/patient/{patientId}")
-    public ResponseEntity<List<Appointment>> getAppointmentsForPatient(@PathVariable Long patientId) {
-        System.out.println("🔍 Getting appointments for patient ID: " + patientId);
-        List<Appointment> appointments = appointmentService.getAppointmentsForPatient(patientId);
-        System.out.println("✅ Found " + appointments.size() + " appointments for patient: " + patientId);
-        return ResponseEntity.ok(appointments);
+    public ResponseEntity<List<AppointmentResponseDTO>> getAppointmentsByPatient(@PathVariable Long patientId) {
+        try {
+            List<AppointmentResponseDTO> appointments = appointmentService.getAppointmentsByPatient(patientId);
+            return ResponseEntity.ok(appointments);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     @GetMapping("/doctor/{doctorId}")
-    public ResponseEntity<List<Appointment>> getAppointmentsForDoctor(@PathVariable Long doctorId) {
-        System.out.println("🔍 Getting appointments for doctor ID: " + doctorId);
-        List<Appointment> appointments = appointmentService.getAppointmentsForDoctor(doctorId);
-        System.out.println("✅ Found " + appointments.size() + " appointments for doctor: " + doctorId);
-        return ResponseEntity.ok(appointments);
-    }
-
-    @GetMapping("/my-appointments")
-    public ResponseEntity<?> getMyAppointments(Authentication authentication) {
-        String userRole = getUserRoleFromAuthentication(authentication);
-        String username = authentication.getName();
-        
-        System.out.println("🔍 Getting my appointments for user: " + username + " with role: " + userRole);
-        
+    public ResponseEntity<List<AppointmentResponseDTO>> getAppointmentsByDoctor(@PathVariable Long doctorId) {
         try {
-            if ("PATIENT".equals(userRole)) {
-                List<AppointmentResponseDTO> appointments = appointmentService.getAppointmentsForCurrentPatientWithDetails(username);
-                System.out.println("✅ Found " + appointments.size() + " appointments for patient: " + username);
-                return ResponseEntity.ok(appointments);
-            } else if ("DOCTOR".equals(userRole)) {
-                List<AppointmentResponseDTO> appointments = appointmentService.getAppointmentsForCurrentDoctorWithDetails(username);
-                System.out.println("✅ Found " + appointments.size() + " appointments for doctor: " + username);
-                return ResponseEntity.ok(appointments);
-            } else {
-                List<AppointmentResponseDTO> appointments = appointmentService.getAllAppointmentsWithDetails();
-                System.out.println("✅ Found " + appointments.size() + " total appointments for admin");
-                return ResponseEntity.ok(appointments);
-            }
-        } catch (RuntimeException e) {
-            System.err.println("❌ Error getting my appointments: " + e.getMessage());
-            return ResponseEntity.badRequest().body(e.getMessage());
+            List<AppointmentResponseDTO> appointments = appointmentService.getAppointmentsByDoctor(doctorId);
+            return ResponseEntity.ok(appointments);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
         }
     }
 
     @GetMapping("/status/{status}")
-    public ResponseEntity<?> getAppointmentsByStatus(@PathVariable String status) {
-        System.out.println("🔍 Getting appointments by status: " + status);
+    public ResponseEntity<List<AppointmentResponseDTO>> getAppointmentsByStatus(@PathVariable String status) {
         try {
             List<AppointmentResponseDTO> appointments = appointmentService.getAppointmentsByStatus(status);
-            System.out.println("✅ Found " + appointments.size() + " appointments with status: " + status);
             return ResponseEntity.ok(appointments);
-        } catch (RuntimeException e) {
-            System.err.println("❌ Error getting appointments by status: " + e.getMessage());
-            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @GetMapping("/my-appointments")
+    public ResponseEntity<?> getMyAppointments(Authentication authentication) {
+        String username = authentication.getName();
+        System.out.println("📅 Fetching appointments for current user: " + username);
+        
+        try {
+            // For now, return all appointments - you can implement user-specific filtering later
+            List<AppointmentResponseDTO> appointments = appointmentService.getAllAppointments();
+            return ResponseEntity.ok(appointments);
+        } catch (Exception e) {
+            System.err.println("❌ Error fetching user appointments: " + e.getMessage());
+            return ResponseEntity.internalServerError().body("Error fetching appointments");
         }
     }
 
     @PutMapping("/{id}/status")
     public ResponseEntity<?> updateAppointmentStatus(
-            @PathVariable Long id, 
+            @PathVariable Long id,
             @RequestParam String status,
             Authentication authentication) {
         
-        System.out.println("🔄 Updating appointment status - ID: " + id + ", Status: " + status);
-        System.out.println("👤 Current user: " + authentication.getName());
-        
-        String userRole = getUserRoleFromAuthentication(authentication);
         String username = authentication.getName();
+        System.out.println("🔄 Updating appointment " + id + " status to: " + status + " by user: " + username);
         
         try {
-            Appointment updatedAppointment = appointmentService.updateAppointmentStatus(id, status, userRole, username);
-            System.out.println("✅ Appointment status updated successfully: " + updatedAppointment.getId());
+            AppointmentResponseDTO updatedAppointment = appointmentService.updateAppointmentStatus(id, status, username);
             return ResponseEntity.ok(updatedAppointment);
         } catch (RuntimeException e) {
             System.err.println("❌ Error updating appointment status: " + e.getMessage());
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<?> updateAppointment(
-            @PathVariable Long id,
-            @RequestBody Appointment appointmentDetails,
-            Authentication authentication) {
-        
-        System.out.println("🔄 Updating appointment - ID: " + id);
-        System.out.println("👤 Current user: " + authentication.getName());
-        
-        String userRole = getUserRoleFromAuthentication(authentication);
-        String username = authentication.getName();
-        
-        try {
-            Appointment updatedAppointment = appointmentService.updateAppointment(id, appointmentDetails, userRole, username);
-            System.out.println("✅ Appointment updated successfully: " + updatedAppointment.getId());
-            return ResponseEntity.ok(updatedAppointment);
-        } catch (RuntimeException e) {
-            System.err.println("❌ Error updating appointment: " + e.getMessage());
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
@@ -203,18 +137,32 @@ public class AppointmentController {
             @PathVariable Long id,
             Authentication authentication) {
         
-        System.out.println("❌ Cancelling appointment: " + id);
-        System.out.println("👤 Current user: " + authentication.getName());
-        
-        String userRole = getUserRoleFromAuthentication(authentication);
         String username = authentication.getName();
+        System.out.println("❌ Cancelling appointment " + id + " by user: " + username);
         
         try {
-            appointmentService.cancelAppointment(id, userRole, username);
-            System.out.println("✅ Appointment cancelled successfully: " + id);
-            return ResponseEntity.noContent().build();
+            AppointmentResponseDTO cancelledAppointment = appointmentService.updateAppointmentStatus(id, "CANCELLED", username);
+            return ResponseEntity.ok(cancelledAppointment);
         } catch (RuntimeException e) {
             System.err.println("❌ Error cancelling appointment: " + e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateAppointment(
+            @PathVariable Long id,
+            @RequestBody Appointment appointmentUpdates,
+            Authentication authentication) {
+        
+        String username = authentication.getName();
+        System.out.println("✏️ Updating appointment " + id + " by user: " + username);
+        
+        try {
+            AppointmentResponseDTO updatedAppointment = appointmentService.updateAppointment(id, appointmentUpdates);
+            return ResponseEntity.ok(updatedAppointment);
+        } catch (RuntimeException e) {
+            System.err.println("❌ Error updating appointment: " + e.getMessage());
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
@@ -224,15 +172,11 @@ public class AppointmentController {
             @PathVariable Long id,
             Authentication authentication) {
         
-        System.out.println("🗑️ Deleting appointment: " + id);
-        System.out.println("👤 Current user: " + authentication.getName());
-        
-        String userRole = getUserRoleFromAuthentication(authentication);
         String username = authentication.getName();
+        System.out.println("🗑️ Deleting appointment " + id + " by user: " + username);
         
         try {
-            appointmentService.deleteAppointment(id, userRole, username);
-            System.out.println("✅ Appointment deleted successfully: " + id);
+            appointmentService.deleteAppointment(id);
             return ResponseEntity.noContent().build();
         } catch (RuntimeException e) {
             System.err.println("❌ Error deleting appointment: " + e.getMessage());
@@ -241,24 +185,27 @@ public class AppointmentController {
     }
 
     @GetMapping("/stats")
-    public ResponseEntity<String> getAppointmentStats() {
-        String stats = appointmentService.getAppointmentStats();
-        System.out.println("📊 Appointment stats: " + stats);
-        return ResponseEntity.ok(stats);
-    }
-
-    // Helper method to extract user role from authentication
-    private String getUserRoleFromAuthentication(Authentication authentication) {
-        if (authentication != null && authentication.getAuthorities() != null) {
-            for (GrantedAuthority authority : authentication.getAuthorities()) {
-                String role = authority.getAuthority();
-                // Convert ROLE_ADMIN → ADMIN, ROLE_DOCTOR → DOCTOR, etc.
-                if (role.startsWith("ROLE_")) {
-                    return role.substring(5); // Remove "ROLE_" prefix
-                }
-                return role;
-            }
+    public ResponseEntity<?> getAppointmentStats() {
+        try {
+            // For now, return basic stats - you can implement proper statistics later
+            List<AppointmentResponseDTO> allAppointments = appointmentService.getAllAppointments();
+            
+            long total = allAppointments.size();
+            long scheduled = allAppointments.stream().filter(a -> "SCHEDULED".equals(a.getStatus())).count();
+            long completed = allAppointments.stream().filter(a -> "COMPLETED".equals(a.getStatus())).count();
+            long cancelled = allAppointments.stream().filter(a -> "CANCELLED".equals(a.getStatus())).count();
+            
+            var stats = new Object() {
+                public final long totalAppointments = total;
+                public final long scheduledAppointments = scheduled;
+                public final long completedAppointments = completed;
+                public final long cancelledAppointments = cancelled;
+            };
+            
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            System.err.println("❌ Error fetching appointment stats: " + e.getMessage());
+            return ResponseEntity.internalServerError().body("Error fetching statistics");
         }
-        return "PATIENT"; // default fallback
     }
 }

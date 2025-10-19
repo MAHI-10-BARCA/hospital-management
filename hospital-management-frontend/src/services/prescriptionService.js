@@ -13,15 +13,39 @@ export const prescriptionService = {
       return response.data;
     } catch (error) {
       if (error.response?.status === 404) {
-        return null; // No prescription found
+        return null;
       }
       throw error;
     }
   },
 
+  // ✅ FIXED: Get prescription by appointment ID for patient
+  getByAppointmentForPatient: async (appointmentId) => {
+    try {
+      console.log(`🔍 Fetching prescription for appointment ${appointmentId} for patient`);
+      const response = await api.get(`/api/prescriptions/appointment/${appointmentId}/patient`);
+      console.log('✅ Prescription API response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error fetching prescription:', error);
+      if (error.response?.status === 404 || error.response?.status === 403) {
+        return null;
+      }
+      throw error;
+    }
+  },
+
+  // ✅ ADDED: Get all prescriptions for current patient
   getMyPrescriptions: async () => {
-    const response = await api.get('/api/prescriptions/my-prescriptions');
-    return response.data;
+    try {
+      console.log('🔍 Fetching all prescriptions for current patient');
+      const response = await api.get('/api/prescriptions/patient/my-prescriptions');
+      console.log('✅ Patient prescriptions response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching patient prescriptions:', error);
+      return [];
+    }
   },
 
   getDoctorPrescriptions: async () => {
