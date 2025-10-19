@@ -17,74 +17,130 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    console.log('🔍 AuthProvider init - Token exists:', !!token);
-    
+    console.log('🔐 AuthProvider - Token exists:', !!token);
     if (token) {
-      console.log('🔄 Fetching user profile...');
       loadUserProfile();
     } else {
-      console.log('🚫 No token found');
       setLoading(false);
     }
   }, []);
 
   const loadUserProfile = async () => {
     try {
+      console.log('🔄 Loading user profile...');
       const userData = await authService.getProfile();
-      console.log('✅ Profile data received:', userData);
-      console.log('✅ User roles:', userData.roles);
-      console.log('✅ User ID:', userData.id);
-      setUser(userData);
-    } catch (error) {
-      console.error('❌ Profile load failed:', error);
-      console.error('❌ Error response:', error.response?.data);
-      console.error('❌ Error status:', error.response?.status);
+      console.log('👤 Profile API response:', userData);
       
-      // If profile fails, clear the invalid token
-      localStorage.removeItem('token');
-      setUser(null);
+      // The profile endpoint returns the full User entity with ID
+      if (!userData.id) {
+        console.error('❌ No user ID found in profile response!');
+        throw new Error('User ID not found in profile data');
+      }
+      
+      setUser(userData);
+      console.log('✅ User profile loaded successfully:', userData);
+      
+    } catch (error) {
+      console.error('❌ Failed to load user profile:', error);
+      logout();
     } finally {
       setLoading(false);
     }
   };
 
   const login = async (credentials) => {
-    console.log('🔑 Login attempt for:', credentials.username);
     try {
+      console.log('🔐 Attempting login...');
       const response = await authService.login(credentials);
-      localStorage.setItem('token', response.token);
-      console.log('✅ Login successful, token saved');
+      console.log('✅ Login API response:', response);
       
-      // Load user profile after successful login
-      await loadUserProfile();
-      return user; // Return the user after profile is loaded
+      // ✅ FIX: The response now contains token, id, username, and roles
+      const { token, id, username, roles } = response;
+      
+      if (!token) {
+        throw new Error('No token received from server');
+      }
+      
+      localStorage.setItem('token', token);
+      
+      // Create user object from login response
+      const userData = {
+        id: id,
+        username: username,
+        roles: roles
+      };
+      
+      console.log('👤 User data from login:', userData);
+      
+      if (!userData.id) {
+        throw new Error('User ID not found in login response');
+      }
+      
+      setUser(userData);
+      
+      return { success: true, user: userData };
     } catch (error) {
       console.error('❌ Login failed:', error);
-      throw error;
+      return { 
+        success: false, 
+        error: error.response?.data?.message || error.message || 'Login failed' 
+      };
     }
   };
 
   const register = async (userData) => {
-    await authService.register(userData);
+    try {
+      const response = await authService.register(userData);
+      return { success: true, data: response };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error.response?.data?.message || 'Registration failed' 
+      };
+    }
   };
 
   const logout = () => {
-    console.log('🚪 Logging out');
+    console.log('🚪 Logging out...');
     localStorage.removeItem('token');
     setUser(null);
   };
 
-  const updateUser = (userData) => {
-    setUser(userData);
+  const updateProfile = async (userData) => {
+    try {
+      const updatedUser = await authService.updateProfile(userData);
+      setUser(updatedUser);
+      return { success: true, user: updatedUser };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error.response?.data?.message || 'Profile update failed' 
+      };
+    }
   };
+
+  // Check if user has specific role
+  const hasRole = (role) => {
+    if (!user || !user.roles) return false;
+    
+    // Handle both "ROLE_ADMIN" and "ADMIN" formats
+    const normalizedRole = role.startsWith('ROLE_') ? role : `ROLE_${role}`;
+    return user.roles.includes(normalizedRole);
+  };
+
+  // Check if user is admin (for booking restrictions)
+  const isAdmin = () => hasRole('ADMIN');
 
   const value = {
     user,
+    loading,
     login,
     register,
     logout,
-    updateUser,
-    loading
+    updateProfile,
+    hasRole,
+    isAdmin,
+    loadUserProfile
   };
 
   return (
@@ -93,3 +149,5 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
+
+export default AuthContext;

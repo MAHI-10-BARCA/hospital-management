@@ -1,20 +1,27 @@
 package com.hms.service;
 
-import com.hms.entity.Patient;
-import com.hms.repository.PatientRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.Optional;
+
+import org.springframework.stereotype.Service;
+
+import com.hms.entity.Patient;
+import com.hms.entity.User;
+import com.hms.repository.PatientRepository;
+import com.hms.repository.UserRepository;
 
 @Service
 public class PatientService {
 
-    @Autowired
-    private PatientRepository patientRepository;
+    private final PatientRepository patientRepository;
+    private final UserRepository userRepository;
 
-    public Patient createPatient(Patient patient) {
+    public PatientService(PatientRepository patientRepository, UserRepository userRepository) {
+        this.patientRepository = patientRepository;
+        this.userRepository = userRepository;
+    }
+
+    public Patient savePatient(Patient patient) {
         return patientRepository.save(patient);
     }
 
@@ -26,19 +33,43 @@ public class PatientService {
         return patientRepository.findById(id);
     }
 
-    public Optional<Patient> updatePatient(Long id, Patient updated) {
-        return patientRepository.findById(id).map(patient -> {
-            patient.setName(updated.getName());
-            patient.setAge(updated.getAge());
-            patient.setGender(updated.getGender());
-            return patientRepository.save(patient);
-        });
+    // ✅ ADD THIS: Get patient by user ID
+    public Optional<Patient> getPatientByUserId(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return patientRepository.findByUser(user);
     }
 
-    public boolean deletePatient(Long id) {
+    // ✅ ADD THIS: Get or create patient for current user
+    public Patient getOrCreatePatientForUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Optional<Patient> existingPatient = patientRepository.findByUser(user);
+        if (existingPatient.isPresent()) {
+            return existingPatient.get();
+        }
+
+        // Auto-create patient profile
+        Patient newPatient = new Patient();
+        newPatient.setName(user.getUsername()); // Use username as default name
+        newPatient.setAge(0); // Default age
+        newPatient.setGender("Not specified"); // Default gender
+        newPatient.setUser(user);
+
+        return patientRepository.save(newPatient);
+    }
+
+    public void deletePatient(Long id) {
+        patientRepository.deleteById(id);
+    }
+
+    public Patient updatePatient(Long id, Patient updatedPatient) {
         return patientRepository.findById(id).map(patient -> {
-            patientRepository.delete(patient);
-            return true;
-        }).orElse(false);
+            patient.setName(updatedPatient.getName());
+            patient.setAge(updatedPatient.getAge());
+            patient.setGender(updatedPatient.getGender());
+            return patientRepository.save(patient);
+        }).orElseThrow(() -> new RuntimeException("Patient not found"));
     }
 }

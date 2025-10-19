@@ -1,14 +1,17 @@
 package com.hms.util;
 
-import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List; // ✅ ADDED
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
-import org.springframework.security.core.GrantedAuthority; // ✅ ADDED
-import org.springframework.security.core.userdetails.UserDetails; // ✅ ADDED
+import javax.crypto.SecretKey;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import io.jsonwebtoken.Claims;
@@ -19,14 +22,17 @@ import io.jsonwebtoken.security.Keys;
 @Component
 public class JwtUtil {
 
-    // ✅ Keep same key but stable key recommended for production
-    private final Key SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS512);
+    @Value("${jwt.secret}")
+    private String SECRET_STRING;
+
+    private SecretKey getSigningKey() {
+        return Keys.hmacShaKeyFor(SECRET_STRING.getBytes());
+    }
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }
 
-    // ✅ Added roles extraction
     public List<String> extractRoles(String token) {
         Claims claims = extractAllClaims(token);
         return claims.get("roles", List.class);
@@ -42,23 +48,27 @@ public class JwtUtil {
     }
 
     private Claims extractAllClaims(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(SECRET_KEY)
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
+        try {
+            return Jwts.parserBuilder()
+                    .setSigningKey(getSigningKey())
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+        } catch (Exception e) {
+            System.err.println("❌ JWT Parsing Error: " + e.getMessage());
+            throw e;
+        }
     }
 
     private Boolean isTokenExpired(String token) {
         return extractExpiration(token).before(new Date());
     }
 
-    // 🔧 CHANGED: Now includes roles from userDetails
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("roles", userDetails.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
-                .toList());
+                .collect(Collectors.toList()));
         return createToken(claims, userDetails.getUsername());
     }
 
@@ -70,8 +80,21 @@ public class JwtUtil {
                 .setSubject(subject)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + expirationTimeMs))
-                .signWith(SECRET_KEY, SignatureAlgorithm.HS512)
+                .signWith(getSigningKey(), SignatureAlgorithm.HS512)
                 .compact();
+    }
+
+    public Boolean validateToken(String token) {
+        try {
+            Jwts.parserBuilder()
+                    .setSigningKey(getSigningKey())
+                    .build()
+                    .parseClaimsJws(token);
+            return true;
+        } catch (Exception e) {
+            System.err.println("❌ JWT Validation Error: " + e.getMessage());
+            return false;
+        }
     }
 
     public Boolean validateToken(String token, String username) {

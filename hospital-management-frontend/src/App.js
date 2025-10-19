@@ -19,7 +19,11 @@ import EditPatient from './pages/Patients/EditPatient';
 import AppointmentsList from './pages/Appointments/AppointmentsList';
 import BookAppointment from './pages/Appointments/BookAppointment';
 import UserProfile from './pages/Profile/UserProfile';
+import UserManagement from './pages/Admin/UserManagement';
+import ManageSchedule from './pages/Schedules/ManageSchedule'; // Add this import
 import LoadingSpinner from './components/Common/LoadingSpinner';
+import ProtectedRoute from './components/Common/ProtectedRoute';
+import SchedulesList from './pages/Schedules/SchedulesList';
 import theme from './styles/theme';
 
 const queryClient = new QueryClient({
@@ -31,7 +35,8 @@ const queryClient = new QueryClient({
   },
 });
 
-const ProtectedRoute = ({ children }) => {
+// Basic auth check (for general protection)
+const AuthProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
   
   if (loading) {
@@ -78,28 +83,76 @@ function App() {
                   </PublicRoute>
                 } />
 
-                {/* Protected Routes */}
+                {/* Protected Routes with Layout */}
                 <Route path="/" element={
-                  <ProtectedRoute>
+                  <AuthProtectedRoute>
                     <Layout />
-                  </ProtectedRoute>
+                  </AuthProtectedRoute>
                 }>
                   <Route index element={<Navigate to="/dashboard" />} />
                   <Route path="dashboard" element={<Dashboard />} />
                   
                   {/* Doctors Routes */}
-                  <Route path="doctors" element={<DoctorsList />} />
-                  <Route path="doctors/add" element={<AddDoctor />} />
-                  <Route path="doctors/edit/:id" element={<EditDoctor />} />
+                  <Route path="doctors" element={
+                    <ProtectedRoute requiredPermission="view_doctors">
+                      <DoctorsList />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="doctors/add" element={
+                    <ProtectedRoute requiredPermission="manage_doctors">
+                      <AddDoctor />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="doctors/edit/:id" element={
+                    <ProtectedRoute requiredPermission="manage_doctors">
+                      <EditDoctor />
+                    </ProtectedRoute>
+                  } />
                   
                   {/* Patients Routes */}
-                  <Route path="patients" element={<PatientsList />} />
-                  <Route path="patients/add" element={<AddPatient />} />
-                  <Route path="patients/edit/:id" element={<EditPatient />} />
+                  <Route path="patients" element={
+                    <ProtectedRoute requiredPermission="view_patients">
+                      <PatientsList />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="patients/add" element={
+                    <ProtectedRoute requiredPermission="manage_patients">
+                      <AddPatient />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="patients/edit/:id" element={
+                    <ProtectedRoute requiredPermission="manage_patients">
+                      <EditPatient />
+                    </ProtectedRoute>
+                  } />
                   
                   {/* Appointments Routes */}
-                  <Route path="appointments" element={<AppointmentsList />} />
-                  <Route path="appointments/book" element={<BookAppointment />} />
+                  <Route path="appointments" element={
+                    <ProtectedRoute requiredPermission="view_appointments">
+                      <AppointmentsList />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="appointments/book" element={
+                    <ProtectedRoute requiredPermission="book_appointments">
+                      <BookAppointment />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Schedule Routes */}
+                  <Route path="schedules/manage" element={
+                    <ProtectedRoute requiredPermission="manage_schedules">
+                      <ManageSchedule />
+                    </ProtectedRoute>
+                  } />
+                  // Add these routes
+<Route path="/schedules/manage" element={<ManageSchedule />} />
+<Route path="/schedules" element={<SchedulesList />} />
+                  {/* Admin Routes */}
+                  <Route path="admin/users" element={
+                    <ProtectedRoute requiredRole="ROLE_ADMIN">
+                      <UserManagement />
+                    </ProtectedRoute>
+                  } />
                   
                   {/* Profile Routes */}
                   <Route path="profile" element={<UserProfile />} />

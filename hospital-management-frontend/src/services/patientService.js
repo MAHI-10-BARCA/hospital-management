@@ -23,5 +23,36 @@ export const patientService = {
 
   delete: async (id) => {
     await api.delete(`/patients/${id}`);
+  },
+
+  // Patient profile methods
+  checkPatientProfile: async () => {
+    try {
+      const response = await api.get('/api/patient-profile/check');
+      return response.data;
+    } catch (error) {
+      console.error('Error checking patient profile:', error);
+      throw error;
+    }
+  },
+
+  createPatientProfile: async (profileData) => {
+    try {
+      const response = await api.post('/api/patient-profile/create', profileData);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating patient profile:', error);
+      throw error;
+    }
+  },
+
+  getMyPatientProfile: async () => {
+    try {
+      const response = await api.get('/api/patient-profile/me');
+      return response.data;
+    } catch (error) {
+      console.error('Error getting patient profile:', error);
+      throw error;
+    }
   }
 };

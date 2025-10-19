@@ -22,6 +22,7 @@ E:\WEB-TECH\hospital-management\hospital-management-frontend\src\components\Comm
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\components\Common\ErrorBoundary.js
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\components\Common\LoadingSpinner.js
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\components\Common\NotFound.js
+E:\WEB-TECH\hospital-management\hospital-management-frontend\src\components\Common\ProtectedRoute.js
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\components\Common\SearchBar.js
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\components\Forms\AppointmentForm.js
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\components\Forms\DoctorForm.js
@@ -58,7 +59,7 @@ E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Auth\Logi
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Auth\Register.js
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Dashboard\AdminDashboard.js
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Dashboard\Dashboard.js
-E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Dashboard\DashboardCards.js
+E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Dashboard\DashboardCard.js
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Dashboard\DoctorDashboard.js
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Dashboard\PatientDashboard.js
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Doctors\AddDoctor.js
@@ -69,7 +70,11 @@ E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Patients\
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Patients\EditPatient.js
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Patients\PatientDetails.js
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Patients\PatientsList.js
+E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Profile\DoctorProfileSetup.css
+E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Profile\DoctorProfileSetup.js
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Profile\EditProfile.js
+E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Profile\PatientProfileSetup.css
+E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Profile\PatientProfileSetup.js
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Profile\UserProfile.js
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Schedules\AddSchedule.js
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Schedules\ManageSchedule.js
@@ -87,4 +92,5 @@ E:\WEB-TECH\hospital-management\hospital-management-frontend\src\styles\theme.js
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\utils\constants.js
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\utils\formatters.js
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\utils\helpers.js
+E:\WEB-TECH\hospital-management\hospital-management-frontend\src\utils\permissions.js
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\utils\validation.js

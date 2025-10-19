@@ -16,10 +16,12 @@ import {
   LocalHospital,
   CalendarToday,
   Person,
+  AdminPanelSettings,
+  Schedule as ScheduleIcon, // Add this import
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { hasRole, USER_ROLES } from '../../utils/helpers';
+import { hasPermission } from '../../utils/helpers';
 
 const drawerWidth = 240;
 
@@ -28,25 +30,43 @@ const menuItems = [
     text: 'Dashboard',
     icon: <Dashboard />,
     path: '/dashboard',
-    roles: [USER_ROLES.ADMIN, USER_ROLES.DOCTOR, USER_ROLES.PATIENT, USER_ROLES.USER],
+    permission: 'view_dashboard',
   },
   {
     text: 'Doctors',
     icon: <LocalHospital />,
     path: '/doctors',
-    roles: [USER_ROLES.ADMIN, USER_ROLES.DOCTOR, USER_ROLES.PATIENT, USER_ROLES.USER],
+    permission: 'view_doctors',
   },
   {
     text: 'Patients',
     icon: <People />,
     path: '/patients',
-    roles: [USER_ROLES.ADMIN, USER_ROLES.DOCTOR],
+    permission: 'manage_patients', // Only admin and doctors
   },
   {
     text: 'Appointments',
     icon: <CalendarToday />,
     path: '/appointments',
-    roles: [USER_ROLES.ADMIN, USER_ROLES.DOCTOR, USER_ROLES.PATIENT, USER_ROLES.USER],
+    permission: 'view_appointments',
+  },
+  {
+    text: 'Book Appointment',
+    icon: <Person />,
+    path: '/appointments/book',
+    permission: 'book_appointments', // Patients and doctors only
+  },
+  {
+    text: 'Manage Schedule',
+    icon: <ScheduleIcon />,
+    path: '/schedules/manage',
+    permission: 'manage_schedules', // Doctors only
+  },
+  {
+    text: 'User Management',
+    icon: <AdminPanelSettings />,
+    path: '/admin/users',
+    permission: 'manage_users', // Admin only
   },
 ];
 
@@ -56,7 +76,7 @@ const Sidebar = ({ open, onClose }) => {
   const { user } = useAuth();
 
   const filteredMenuItems = menuItems.filter(item =>
-    item.roles.some(role => hasRole(user, role))
+    hasPermission(user, item.permission)
   );
 
   const handleNavigation = (path) => {
@@ -81,7 +101,9 @@ const Sidebar = ({ open, onClose }) => {
           variant="body2" 
           color="textSecondary"
         >
-          Hospital Management
+          {user?.roles?.includes('ROLE_ADMIN') ? 'Admin Panel' : 
+           user?.roles?.includes('ROLE_DOCTOR') ? 'Doctor Portal' :
+           user?.roles?.includes('ROLE_PATIENT') ? 'Patient Portal' : 'User Portal'}
         </Typography>
       </Box>
 

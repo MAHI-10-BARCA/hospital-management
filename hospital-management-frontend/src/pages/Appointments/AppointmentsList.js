@@ -19,6 +19,8 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
 import { appointmentService } from '../../services/appointmentService';
+import { useAuth } from '../../contexts/AuthContext';
+import { hasPermission } from '../../utils/helpers';
 import LoadingSpinner from '../../components/Common/LoadingSpinner';
 import ConfirmDialog from '../../components/Common/ConfirmDialog';
 import { getStatusColor, formatDate, formatTime } from '../../utils/helpers';
@@ -33,6 +35,7 @@ const AppointmentsList = () => {
 
   const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
+  const { user } = useAuth();
 
   useEffect(() => {
     loadAppointments();
@@ -84,14 +87,16 @@ const AppointmentsList = () => {
         <Typography variant="h4" component="h1" fontWeight="bold">
           Appointments
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => navigate('/appointments/book')}
-          sx={{ borderRadius: 2 }}
-        >
-          Book Appointment
-        </Button>
+        {hasPermission(user, 'book_appointments') && (
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => navigate('/appointments/book')}
+            sx={{ borderRadius: 2 }}
+          >
+            Book Appointment
+          </Button>
+        )}
       </Box>
 
       {/* Search Bar */}
@@ -174,21 +179,23 @@ const AppointmentsList = () => {
                   </Box>
                 </Box>
 
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleDeleteClick(appointment)}
-                    sx={{
-                      backgroundColor: 'error.light',
-                      color: 'white',
-                      '&:hover': {
-                        backgroundColor: 'error.main',
-                      },
-                    }}
-                  >
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
-                </Box>
+                {hasPermission(user, 'manage_appointments') && (
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleDeleteClick(appointment)}
+                      sx={{
+                        backgroundColor: 'error.light',
+                        color: 'white',
+                        '&:hover': {
+                          backgroundColor: 'error.main',
+                        },
+                      }}
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                )}
               </CardContent>
             </Card>
           </Grid>

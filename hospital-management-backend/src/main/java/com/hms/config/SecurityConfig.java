@@ -38,39 +38,57 @@ public class SecurityConfig {
 
             .authorizeHttpRequests(auth -> auth
                 // --- Public endpoints ---
-                .requestMatchers("/", "/auth/**").permitAll()
+                .requestMatchers("/", "/auth/**", "/api/auth/**").permitAll()
 
                 // --- Profile endpoints ---
-                .requestMatchers("/api/profile/**").authenticated()
+                .requestMatchers("/api/profile/**", "/api/doctor-profile/**", "/api/patient-profile/**").authenticated()
 
                 // --- Doctor endpoints ---
-                .requestMatchers(HttpMethod.GET, "/api/doctors", "/api/doctors/**")
-                    .hasAnyAuthority("ROLE_ADMIN", "ROLE_DOCTOR")
-                .requestMatchers(HttpMethod.POST, "/api/doctors")
+                // ✅ FIXED: Changed from /api/doctors to /doctors (matches your controller)
+                .requestMatchers(HttpMethod.GET, "/doctors", "/doctors/**")
+                    .hasAnyAuthority("ROLE_ADMIN", "ROLE_DOCTOR", "ROLE_PATIENT")
+                .requestMatchers(HttpMethod.POST, "/doctors")
                     .hasAuthority("ROLE_ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/api/doctors/**")
+                .requestMatchers(HttpMethod.PUT, "/doctors/**")
                     .hasAuthority("ROLE_ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/api/doctors/**")
+                .requestMatchers(HttpMethod.DELETE, "/doctors/**")
                     .hasAuthority("ROLE_ADMIN")
 
                 // --- Patient endpoints ---
-                .requestMatchers(HttpMethod.GET, "/api/patients", "/api/patients/**")
+                // ✅ FIXED: Changed from /api/patients to /patients (matches your controller)
+                .requestMatchers(HttpMethod.GET, "/patients", "/patients/**")
                     .hasAnyAuthority("ROLE_ADMIN", "ROLE_DOCTOR")
-                .requestMatchers(HttpMethod.POST, "/api/patients")
+                .requestMatchers(HttpMethod.POST, "/patients")
                     .hasAuthority("ROLE_ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/api/patients/**")
+                .requestMatchers(HttpMethod.PUT, "/patients/**")
                     .hasAuthority("ROLE_ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/api/patients/**")
+                .requestMatchers(HttpMethod.DELETE, "/patients/**")
                     .hasAuthority("ROLE_ADMIN")
+
+                // --- Schedule endpoints ---
+                .requestMatchers(HttpMethod.GET, "/api/schedules/**")
+                    .hasAnyAuthority("ROLE_ADMIN", "ROLE_DOCTOR", "ROLE_PATIENT")
+                .requestMatchers(HttpMethod.POST, "/api/schedules/doctor/**")
+                    .hasAuthority("ROLE_DOCTOR") // Only doctors can create their own schedules
+                .requestMatchers(HttpMethod.POST, "/api/schedules/admin")
+                    .hasAuthority("ROLE_ADMIN") // Admin can create schedules for any doctor
+                .requestMatchers(HttpMethod.PUT, "/api/schedules/**")
+                    .hasAnyAuthority("ROLE_ADMIN", "ROLE_DOCTOR")
+                .requestMatchers(HttpMethod.DELETE, "/api/schedules/**")
+                    .hasAnyAuthority("ROLE_ADMIN", "ROLE_DOCTOR")
 
                 // --- Appointment endpoints ---
                 .requestMatchers(HttpMethod.GET, "/api/appointments", "/api/appointments/**")
-                    .hasAnyAuthority("ROLE_ADMIN", "ROLE_DOCTOR", "ROLE_PATIENT", "ROLE_USER")
+                    .hasAnyAuthority("ROLE_ADMIN", "ROLE_DOCTOR", "ROLE_PATIENT")
                 .requestMatchers(HttpMethod.POST, "/api/appointments")
-                    .hasAnyAuthority("ROLE_ADMIN", "ROLE_PATIENT", "ROLE_USER")
+                    .hasAnyAuthority("ROLE_PATIENT", "ROLE_DOCTOR") // ADMIN NOT ALLOWED
                 .requestMatchers(HttpMethod.PUT, "/api/appointments/**")
                     .hasAnyAuthority("ROLE_ADMIN", "ROLE_DOCTOR")
                 .requestMatchers(HttpMethod.DELETE, "/api/appointments/**")
+                    .hasAuthority("ROLE_ADMIN")
+
+                // --- User Management (Admin only) ---
+                .requestMatchers("/api/users/**")
                     .hasAuthority("ROLE_ADMIN")
 
                 // --- Everything else ---

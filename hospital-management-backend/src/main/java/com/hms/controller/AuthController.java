@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.hms.dto.JwtRequest;
 import com.hms.dto.JwtResponse;
-import com.hms.dto.RegistrationRequest; // ADD THIS IMPORT
+import com.hms.dto.RegistrationRequest;
 import com.hms.entity.User;
 import com.hms.repository.UserRepository;
 import com.hms.util.JwtUtil;
@@ -44,21 +44,16 @@ public class AuthController {
     @Autowired
     private JwtUtil jwtUtil;
 
-    // ✅ FIXED Registration endpoint - Use RegistrationRequest DTO
     @PostMapping("/register")
     public ResponseEntity<String> registerUser(@RequestBody RegistrationRequest registrationRequest) {
         System.out.println("🔐 Registration attempt for user: " + registrationRequest.getUsername());
-        System.out.println("🔐 Roles received: " + registrationRequest.getRoles());
-        System.out.println("🔐 Password received: " + (registrationRequest.getPassword() != null ? "***" : "NULL"));
-        System.out.println("🔐 Full registration request: " + registrationRequest.toString());
-
+        
         // Validate request data
         if (registrationRequest.getUsername() == null || registrationRequest.getUsername().trim().isEmpty()) {
             return ResponseEntity.badRequest().body("Username is required!");
         }
 
         if (registrationRequest.getPassword() == null || registrationRequest.getPassword().trim().isEmpty()) {
-            System.err.println("❌ ERROR: Password is null or empty!");
             return ResponseEntity.badRequest().body("Password cannot be empty!");
         }
 
@@ -82,11 +77,10 @@ public class AuthController {
         }
 
         User savedUser = userRepository.save(user);
-        System.out.println("✅ User registered successfully: " + savedUser.getUsername() + " with roles: " + savedUser.getRoles());
+        System.out.println("✅ User registered successfully: " + savedUser.getUsername() + " with ID: " + savedUser.getId());
         return ResponseEntity.ok("User registered successfully!");
     }
 
-    // ✅ Login endpoint (unchanged)
     @PostMapping("/login")
     public ResponseEntity<JwtResponse> createAuthenticationToken(@RequestBody JwtRequest authenticationRequest) throws Exception {
         authenticationManager.authenticate(
@@ -107,6 +101,13 @@ public class AuthController {
                 .map(a -> a.getAuthority())
                 .collect(Collectors.toList());
 
-        return ResponseEntity.ok(new JwtResponse(token, roles));
+        // ✅ FIX: Get the actual User entity to include ID
+        User user = userRepository.findByUsername(authenticationRequest.username())
+                .orElseThrow(() -> new RuntimeException("User not found after authentication"));
+
+        System.out.println("✅ Login successful for user: " + user.getUsername() + " with ID: " + user.getId());
+
+        // ✅ FIX: Return complete user info including ID
+        return ResponseEntity.ok(new JwtResponse(token, user.getId(), user.getUsername(), roles));
     }
 }

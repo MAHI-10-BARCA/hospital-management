@@ -24,6 +24,8 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
 import { doctorService } from '../../services/doctorService';
+import { useAuth } from '../../contexts/AuthContext';
+import { hasPermission } from '../../utils/helpers';
 import LoadingSpinner from '../../components/Common/LoadingSpinner';
 import ConfirmDialog from '../../components/Common/ConfirmDialog';
 
@@ -37,6 +39,7 @@ const DoctorsList = () => {
 
   const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
+  const { user } = useAuth();
 
   useEffect(() => {
     loadDoctors();
@@ -91,14 +94,16 @@ const DoctorsList = () => {
         <Typography variant="h4" component="h1" fontWeight="bold">
           Doctors
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => navigate('/doctors/add')}
-          sx={{ borderRadius: 2 }}
-        >
-          Add Doctor
-        </Button>
+        {hasPermission(user, 'manage_doctors') && (
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => navigate('/doctors/add')}
+            sx={{ borderRadius: 2 }}
+          >
+            Add Doctor
+          </Button>
+        )}
       </Box>
 
       {/* Search Bar */}
@@ -169,34 +174,36 @@ const DoctorsList = () => {
                   Contact: {doctor.contact}
                 </Typography>
 
-                <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleEdit(doctor)}
-                    sx={{
-                      backgroundColor: 'primary.light',
-                      color: 'white',
-                      '&:hover': {
-                        backgroundColor: 'primary.main',
-                      },
-                    }}
-                  >
-                    <EditIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleDeleteClick(doctor)}
-                    sx={{
-                      backgroundColor: 'error.light',
-                      color: 'white',
-                      '&:hover': {
-                        backgroundColor: 'error.main',
-                      },
-                    }}
-                  >
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
-                </Box>
+                {hasPermission(user, 'manage_doctors') && (
+                  <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleEdit(doctor)}
+                      sx={{
+                        backgroundColor: 'primary.light',
+                        color: 'white',
+                        '&:hover': {
+                          backgroundColor: 'primary.main',
+                        },
+                      }}
+                    >
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleDeleteClick(doctor)}
+                      sx={{
+                        backgroundColor: 'error.light',
+                        color: 'white',
+                        '&:hover': {
+                          backgroundColor: 'error.main',
+                        },
+                      }}
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                )}
               </CardContent>
             </Card>
           </Grid>

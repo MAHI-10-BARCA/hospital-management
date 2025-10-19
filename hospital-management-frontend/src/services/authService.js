@@ -3,6 +3,7 @@ import api from './api';
 export const authService = {
   login: async (credentials) => {
     const response = await api.post('/auth/login', credentials);
+    console.log('🔐 Login service response:', response.data);
     return response.data;
   },
 
@@ -13,6 +14,7 @@ export const authService = {
 
   getProfile: async () => {
     const response = await api.get('/api/profile/me');
+    console.log('👤 Profile service response:', response.data);
     return response.data;
   },
 

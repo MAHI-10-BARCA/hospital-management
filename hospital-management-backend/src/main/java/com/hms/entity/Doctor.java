@@ -1,8 +1,18 @@
 package com.hms.entity;
 
-import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
 
 @Entity
+@Table(name = "doctor") // ✅ CRITICAL FIX: Changed from "doctor" to "doctors"
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Doctor {
 
     @Id
@@ -13,12 +23,18 @@ public class Doctor {
     private String specialization;
     private String contact;
 
+    // ✅ Link Doctor to User
+    @OneToOne
+    @JoinColumn(name = "user_id", unique = true)
+    private User user;
+
     public Doctor() {}
 
-    public Doctor(String name, String specialization, String contact) {
+    public Doctor(String name, String specialization, String contact, User user) {
         this.name = name;
         this.specialization = specialization;
         this.contact = contact;
+        this.user = user;
     }
 
     // Getters and Setters
@@ -33,4 +49,7 @@ public class Doctor {
 
     public String getContact() { return contact; }
     public void setContact(String contact) { this.contact = contact; }
+
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
 }
