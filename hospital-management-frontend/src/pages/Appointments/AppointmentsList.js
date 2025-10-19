@@ -32,14 +32,17 @@ import {
   Person as PersonIcon,
   LocalHospital as DoctorIcon,
   Edit as EditIcon,
+  Description as DescriptionIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
 import { appointmentService } from '../../services/appointmentService';
+import { prescriptionService } from '../../services/prescriptionService'; // ✅ ADDED
 import { useAuth } from '../../contexts/AuthContext';
 import { hasPermission } from '../../utils/helpers';
 import LoadingSpinner from '../../components/Common/LoadingSpinner';
 import ConfirmDialog from '../../components/Common/ConfirmDialog';
+import PrescriptionForm from '../Prescription/PrescriptionForm';
 import { 
   formatDate, 
   formatTime, 
@@ -56,9 +59,12 @@ const AppointmentsList = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [prescriptionDialogOpen, setPrescriptionDialogOpen] = useState(false);
   const [appointmentToDelete, setAppointmentToDelete] = useState(null);
   const [appointmentForStatus, setAppointmentForStatus] = useState(null);
   const [appointmentForEdit, setAppointmentForEdit] = useState(null);
+  const [selectedAppointmentForPrescription, setSelectedAppointmentForPrescription] = useState(null);
+  const [existingPrescription, setExistingPrescription] = useState(null);
   const [newStatus, setNewStatus] = useState('');
   const [editReason, setEditReason] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -91,6 +97,22 @@ const AppointmentsList = () => {
       enqueueSnackbar('Failed to load appointments', { variant: 'error' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePrescriptionClick = async (appointment) => {
+    try {
+      setSelectedAppointmentForPrescription(appointment);
+      
+      // Check if prescription already exists
+      const prescription = await prescriptionService.getByAppointment(appointment.id);
+      setExistingPrescription(prescription);
+      setPrescriptionDialogOpen(true);
+    } catch (error) {
+      // No prescription exists, create new one
+      console.log('No existing prescription found, creating new one');
+      setExistingPrescription(null);
+      setPrescriptionDialogOpen(true);
     }
   };
 
@@ -382,6 +404,15 @@ const AppointmentsList = () => {
         <MenuItem onClick={() => handleEditClick(selectedAppointment)}>
           <EditIcon sx={{ mr: 1 }} /> Edit Reason
         </MenuItem>
+        
+        {/* Prescription Button for COMPLETED or IN_PROGRESS appointments */}
+        {(selectedAppointment?.status === 'COMPLETED' || selectedAppointment?.status === 'IN_PROGRESS') && (
+          <MenuItem onClick={() => handlePrescriptionClick(selectedAppointment)}>
+            <DescriptionIcon sx={{ mr: 1 }} /> 
+            {existingPrescription ? 'View Prescription' : 'Create Prescription'}
+          </MenuItem>
+        )}
+        
         {hasPermission(user, 'manage_appointments') && (
           <MenuItem onClick={() => handleDeleteClick(selectedAppointment)} sx={{ color: 'error.main' }}>
             <DeleteIcon sx={{ mr: 1 }} /> Delete Appointment
@@ -468,6 +499,21 @@ const AppointmentsList = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Prescription Dialog */}
+      <PrescriptionForm
+        open={prescriptionDialogOpen}
+        onClose={(refresh) => {
+          setPrescriptionDialogOpen(false);
+          setSelectedAppointmentForPrescription(null);
+          setExistingPrescription(null);
+          if (refresh) {
+            loadAppointments();
+          }
+        }}
+        appointment={selectedAppointmentForPrescription}
+        prescription={existingPrescription}
+      />
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog

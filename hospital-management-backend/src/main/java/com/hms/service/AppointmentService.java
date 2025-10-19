@@ -2,10 +2,12 @@ package com.hms.service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.hms.dto.AppointmentResponseDTO;
 import com.hms.entity.Appointment;
 import com.hms.entity.Doctor;
 import com.hms.entity.DoctorSchedule;
@@ -39,7 +41,8 @@ public class AppointmentService {
         System.out.println("🔄 Creating appointment for user: " + username + " with role: " + userRole);
         System.out.println("📋 Appointment data - Patient: " + appointment.getPatient() + 
                          ", Doctor: " + appointment.getDoctor() + 
-                         ", Schedule: " + appointment.getSchedule());
+                         ", Schedule: " + appointment.getSchedule() +
+                         ", Reason: " + appointment.getReason());
         
         // Validate required fields
         if (appointment.getPatient() == null || appointment.getPatient().getId() == null) {
@@ -50,6 +53,9 @@ public class AppointmentService {
         }
         if (appointment.getSchedule() == null || appointment.getSchedule().getId() == null) {
             throw new RuntimeException("Schedule is required");
+        }
+        if (appointment.getReason() == null || appointment.getReason().trim().isEmpty()) {
+            throw new RuntimeException("Appointment reason is required");
         }
 
         // Get the actual entities from database
@@ -78,7 +84,7 @@ public class AppointmentService {
             }
         }
 
-        // ✅ UPDATED: Check if schedule is available using new method
+        // Check if schedule is available
         if (!schedule.isAvailable()) {
             throw new RuntimeException("This time slot is fully booked. Current bookings: " + 
                                      schedule.getCurrentBookings() + "/" + schedule.getMaxPatients());
@@ -89,8 +95,9 @@ public class AppointmentService {
         appointment.setDoctor(doctor);
         appointment.setSchedule(schedule);
         appointment.setStatus("SCHEDULED");
+        // Reason is already set from request
 
-        // ✅ UPDATED: Book the slot (increment bookings instead of setting isBooked)
+        // Book the slot
         schedule.bookSlot();
         doctorScheduleRepository.save(schedule);
 
@@ -105,8 +112,22 @@ public class AppointmentService {
         return appointmentRepository.findAll();
     }
 
+    // ✅ ADDED: Get appointments with DTO for better frontend display
+    public List<AppointmentResponseDTO> getAllAppointmentsWithDetails() {
+        List<Appointment> appointments = appointmentRepository.findAll();
+        return appointments.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
     public Optional<Appointment> getAppointmentById(Long id) {
         return appointmentRepository.findById(id);
+    }
+
+    // ✅ ADDED: Get appointment with details by ID
+    public Optional<AppointmentResponseDTO> getAppointmentWithDetailsById(Long id) {
+        return appointmentRepository.findById(id)
+                .map(this::convertToDTO);
     }
 
     public List<Appointment> getAppointmentsForPatient(Long patientId) {
@@ -125,12 +146,36 @@ public class AppointmentService {
         return appointmentRepository.findByPatientId(patient.getId());
     }
 
+    // ✅ ADDED: Get appointments for current patient with details
+    public List<AppointmentResponseDTO> getAppointmentsForCurrentPatientWithDetails(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        Patient patient = patientRepository.findByUser(user)
+                .orElseThrow(() -> new RuntimeException("Patient profile not found"));
+        List<Appointment> appointments = appointmentRepository.findByPatientId(patient.getId());
+        return appointments.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
     public List<Appointment> getAppointmentsForCurrentDoctor(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         Doctor doctor = doctorRepository.findByUser(user)
                 .orElseThrow(() -> new RuntimeException("Doctor profile not found"));
         return appointmentRepository.findByDoctorId(doctor.getId());
+    }
+
+    // ✅ ADDED: Get appointments for current doctor with details
+    public List<AppointmentResponseDTO> getAppointmentsForCurrentDoctorWithDetails(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        Doctor doctor = doctorRepository.findByUser(user)
+                .orElseThrow(() -> new RuntimeException("Doctor profile not found"));
+        List<Appointment> appointments = appointmentRepository.findByDoctorId(doctor.getId());
+        return appointments.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
     }
 
     public Appointment updateAppointmentStatus(Long id, String status, String userRole, String username) {
@@ -149,11 +194,47 @@ public class AppointmentService {
             }
         }
 
+        // Validate status
+        if (!isValidStatus(status)) {
+            throw new RuntimeException("Invalid status: " + status);
+        }
+
         String oldStatus = appointment.getStatus();
         appointment.setStatus(status);
         
         Appointment updatedAppointment = appointmentRepository.save(appointment);
         System.out.println("✅ Appointment status updated from " + oldStatus + " to " + status);
+        
+        return updatedAppointment;
+    }
+
+    // ✅ ADDED: Update appointment with full details
+    public Appointment updateAppointment(Long id, Appointment appointmentDetails, String userRole, String username) {
+        Appointment appointment = appointmentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Appointment not found"));
+
+        // Authorization check
+        if ("DOCTOR".equals(userRole)) {
+            User currentUser = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            Doctor currentDoctor = doctorRepository.findByUser(currentUser)
+                    .orElseThrow(() -> new RuntimeException("Doctor profile not found"));
+            
+            if (!appointment.getDoctor().getId().equals(currentDoctor.getId())) {
+                throw new RuntimeException("Doctors can only update their own appointments");
+            }
+        }
+
+        // Update fields
+        if (appointmentDetails.getReason() != null) {
+            appointment.setReason(appointmentDetails.getReason());
+        }
+        if (appointmentDetails.getStatus() != null && isValidStatus(appointmentDetails.getStatus())) {
+            appointment.setStatus(appointmentDetails.getStatus());
+        }
+
+        Appointment updatedAppointment = appointmentRepository.save(appointment);
+        System.out.println("✅ Appointment updated: " + updatedAppointment.getId());
         
         return updatedAppointment;
     }
@@ -185,7 +266,7 @@ public class AppointmentService {
             }
         }
 
-        // ✅ UPDATED: Free up the schedule slot
+        // Free up the schedule slot
         DoctorSchedule schedule = appointment.getSchedule();
         schedule.cancelBooking();
         doctorScheduleRepository.save(schedule);
@@ -208,7 +289,7 @@ public class AppointmentService {
             throw new RuntimeException("Only administrators can delete appointments");
         }
 
-        // ✅ UPDATED: Free up the schedule if appointment was active
+        // Free up the schedule if appointment was active
         if (!"CANCELLED".equals(appointment.getStatus())) {
             DoctorSchedule schedule = appointment.getSchedule();
             schedule.cancelBooking();
@@ -220,13 +301,64 @@ public class AppointmentService {
         System.out.println("✅ Appointment deleted successfully: " + id);
     }
 
+    // ✅ ADDED: Helper method to convert Appointment to DTO
+    private AppointmentResponseDTO convertToDTO(Appointment appointment) {
+        AppointmentResponseDTO dto = new AppointmentResponseDTO();
+        dto.setId(appointment.getId());
+        
+        // Patient details
+        if (appointment.getPatient() != null) {
+            dto.setPatientId(appointment.getPatient().getId());
+            dto.setPatientName(appointment.getPatient().getName());
+        }
+        
+        // Doctor details
+        if (appointment.getDoctor() != null) {
+            dto.setDoctorId(appointment.getDoctor().getId());
+            dto.setDoctorName(appointment.getDoctor().getName());
+            dto.setDoctorSpecialization(appointment.getDoctor().getSpecialization());
+        }
+        
+        // Schedule details
+        if (appointment.getSchedule() != null) {
+            dto.setScheduleId(appointment.getSchedule().getId());
+            dto.setAppointmentDate(appointment.getSchedule().getAvailableDate());
+            dto.setStartTime(appointment.getSchedule().getStartTime());
+            dto.setEndTime(appointment.getSchedule().getEndTime());
+        }
+        
+        // Appointment details
+        dto.setStatus(appointment.getStatus());
+        dto.setReason(appointment.getReason());
+        dto.setCreatedDate(appointment.getCreatedDate());
+        
+        return dto;
+    }
+
+    // ✅ ADDED: Validate appointment status
+    private boolean isValidStatus(String status) {
+        return List.of("SCHEDULED", "CONFIRMED", "IN_PROGRESS", "COMPLETED", "CANCELLED").contains(status);
+    }
+
     // ✅ ADDED: Method to get appointment statistics
     public String getAppointmentStats() {
         long totalAppointments = appointmentRepository.count();
         long scheduledAppointments = appointmentRepository.findByStatus("SCHEDULED").size();
+        long confirmedAppointments = appointmentRepository.findByStatus("CONFIRMED").size();
+        long inProgressAppointments = appointmentRepository.findByStatus("IN_PROGRESS").size();
+        long completedAppointments = appointmentRepository.findByStatus("COMPLETED").size();
         long cancelledAppointments = appointmentRepository.findByStatus("CANCELLED").size();
         
-        return String.format("Total: %d, Scheduled: %d, Cancelled: %d", 
-                           totalAppointments, scheduledAppointments, cancelledAppointments);
+        return String.format("Total: %d, Scheduled: %d, Confirmed: %d, In Progress: %d, Completed: %d, Cancelled: %d", 
+                           totalAppointments, scheduledAppointments, confirmedAppointments, 
+                           inProgressAppointments, completedAppointments, cancelledAppointments);
+    }
+
+    // ✅ ADDED: Get appointments by status
+    public List<AppointmentResponseDTO> getAppointmentsByStatus(String status) {
+        List<Appointment> appointments = appointmentRepository.findByStatus(status);
+        return appointments.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
     }
 }

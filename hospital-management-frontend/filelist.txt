@@ -1,8 +1,0 @@
-.gitignore
-filelist.txt
-node_modules
-package-lock.json
-package.json
-public
-README.md
-src

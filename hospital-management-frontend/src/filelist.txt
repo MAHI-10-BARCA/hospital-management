@@ -46,6 +46,7 @@ E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Auth
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Dashboard
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Doctors
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Patients
+E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Prescription
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Profile
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Schedules
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Admin\SystemSettings.js
@@ -70,6 +71,7 @@ E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Patients\
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Patients\EditPatient.js
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Patients\PatientDetails.js
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Patients\PatientsList.js
+E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Prescription\PrescriptionForm.js
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Profile\DoctorProfileSetup.css
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Profile\DoctorProfileSetup.js
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\pages\Profile\EditProfile.js
@@ -85,6 +87,7 @@ E:\WEB-TECH\hospital-management\hospital-management-frontend\src\services\appoin
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\services\authService.js
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\services\doctorService.js
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\services\patientService.js
+E:\WEB-TECH\hospital-management\hospital-management-frontend\src\services\prescriptionService.js
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\services\scheduleService.js
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\services\userService.js
 E:\WEB-TECH\hospital-management\hospital-management-frontend\src\styles\global.css
