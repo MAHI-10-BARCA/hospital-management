@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.hms.dto.AppointmentResponseDTO;
 import com.hms.entity.Appointment;
 import com.hms.service.AppointmentService;
 
@@ -51,43 +52,49 @@ public class AppointmentController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Appointment>> getAllAppointments(Authentication authentication) {
+    public ResponseEntity<?> getAllAppointments(Authentication authentication) {
         String userRole = getUserRoleFromAuthentication(authentication);
         String username = authentication.getName();
         
         System.out.println("🔍 Getting appointments for user: " + username + " with role: " + userRole);
         
-        // If user is PATIENT, only return their appointments
-        if ("PATIENT".equals(userRole)) {
-            List<Appointment> patientAppointments = appointmentService.getAppointmentsForCurrentPatient(username);
-            System.out.println("✅ Found " + patientAppointments.size() + " appointments for patient: " + username);
-            return ResponseEntity.ok(patientAppointments);
+        try {
+            // Return DTOs with detailed information for better frontend display
+            if ("PATIENT".equals(userRole)) {
+                List<AppointmentResponseDTO> patientAppointments = appointmentService.getAppointmentsForCurrentPatientWithDetails(username);
+                System.out.println("✅ Found " + patientAppointments.size() + " appointments for patient: " + username);
+                return ResponseEntity.ok(patientAppointments);
+            } else if ("DOCTOR".equals(userRole)) {
+                List<AppointmentResponseDTO> doctorAppointments = appointmentService.getAppointmentsForCurrentDoctorWithDetails(username);
+                System.out.println("✅ Found " + doctorAppointments.size() + " appointments for doctor: " + username);
+                return ResponseEntity.ok(doctorAppointments);
+            } else {
+                // ADMIN gets all appointments with details
+                List<AppointmentResponseDTO> allAppointments = appointmentService.getAllAppointmentsWithDetails();
+                System.out.println("✅ Found " + allAppointments.size() + " total appointments");
+                return ResponseEntity.ok(allAppointments);
+            }
+        } catch (RuntimeException e) {
+            System.err.println("❌ Error getting appointments: " + e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
-        
-        // If user is DOCTOR, return their doctor's appointments
-        if ("DOCTOR".equals(userRole)) {
-            List<Appointment> doctorAppointments = appointmentService.getAppointmentsForCurrentDoctor(username);
-            System.out.println("✅ Found " + doctorAppointments.size() + " appointments for doctor: " + username);
-            return ResponseEntity.ok(doctorAppointments);
-        }
-        
-        // ADMIN gets all appointments
-        List<Appointment> allAppointments = appointmentService.getAllAppointments();
-        System.out.println("✅ Found " + allAppointments.size() + " total appointments");
-        return ResponseEntity.ok(allAppointments);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Appointment> getAppointmentById(@PathVariable Long id) {
+    public ResponseEntity<?> getAppointmentById(@PathVariable Long id) {
         System.out.println("🔍 Getting appointment by ID: " + id);
-        Optional<Appointment> appointment = appointmentService.getAppointmentById(id);
-        
-        if (appointment.isPresent()) {
-            System.out.println("✅ Found appointment: " + appointment.get().getId());
-            return ResponseEntity.ok(appointment.get());
-        } else {
-            System.err.println("❌ Appointment not found: " + id);
-            return ResponseEntity.notFound().build();
+        try {
+            Optional<AppointmentResponseDTO> appointment = appointmentService.getAppointmentWithDetailsById(id);
+            if (appointment.isPresent()) {
+                System.out.println("✅ Found appointment: " + appointment.get().getId());
+                return ResponseEntity.ok(appointment.get());
+            } else {
+                System.err.println("❌ Appointment not found: " + id);
+                return ResponseEntity.notFound().build();
+            }
+        } catch (RuntimeException e) {
+            System.err.println("❌ Error getting appointment: " + e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
@@ -108,24 +115,42 @@ public class AppointmentController {
     }
 
     @GetMapping("/my-appointments")
-    public ResponseEntity<List<Appointment>> getMyAppointments(Authentication authentication) {
+    public ResponseEntity<?> getMyAppointments(Authentication authentication) {
         String userRole = getUserRoleFromAuthentication(authentication);
         String username = authentication.getName();
         
         System.out.println("🔍 Getting my appointments for user: " + username + " with role: " + userRole);
         
-        if ("PATIENT".equals(userRole)) {
-            List<Appointment> appointments = appointmentService.getAppointmentsForCurrentPatient(username);
-            System.out.println("✅ Found " + appointments.size() + " appointments for patient: " + username);
+        try {
+            if ("PATIENT".equals(userRole)) {
+                List<AppointmentResponseDTO> appointments = appointmentService.getAppointmentsForCurrentPatientWithDetails(username);
+                System.out.println("✅ Found " + appointments.size() + " appointments for patient: " + username);
+                return ResponseEntity.ok(appointments);
+            } else if ("DOCTOR".equals(userRole)) {
+                List<AppointmentResponseDTO> appointments = appointmentService.getAppointmentsForCurrentDoctorWithDetails(username);
+                System.out.println("✅ Found " + appointments.size() + " appointments for doctor: " + username);
+                return ResponseEntity.ok(appointments);
+            } else {
+                List<AppointmentResponseDTO> appointments = appointmentService.getAllAppointmentsWithDetails();
+                System.out.println("✅ Found " + appointments.size() + " total appointments for admin");
+                return ResponseEntity.ok(appointments);
+            }
+        } catch (RuntimeException e) {
+            System.err.println("❌ Error getting my appointments: " + e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/status/{status}")
+    public ResponseEntity<?> getAppointmentsByStatus(@PathVariable String status) {
+        System.out.println("🔍 Getting appointments by status: " + status);
+        try {
+            List<AppointmentResponseDTO> appointments = appointmentService.getAppointmentsByStatus(status);
+            System.out.println("✅ Found " + appointments.size() + " appointments with status: " + status);
             return ResponseEntity.ok(appointments);
-        } else if ("DOCTOR".equals(userRole)) {
-            List<Appointment> appointments = appointmentService.getAppointmentsForCurrentDoctor(username);
-            System.out.println("✅ Found " + appointments.size() + " appointments for doctor: " + username);
-            return ResponseEntity.ok(appointments);
-        } else {
-            List<Appointment> appointments = appointmentService.getAllAppointments();
-            System.out.println("✅ Found " + appointments.size() + " total appointments for admin");
-            return ResponseEntity.ok(appointments);
+        } catch (RuntimeException e) {
+            System.err.println("❌ Error getting appointments by status: " + e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
@@ -147,6 +172,28 @@ public class AppointmentController {
             return ResponseEntity.ok(updatedAppointment);
         } catch (RuntimeException e) {
             System.err.println("❌ Error updating appointment status: " + e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateAppointment(
+            @PathVariable Long id,
+            @RequestBody Appointment appointmentDetails,
+            Authentication authentication) {
+        
+        System.out.println("🔄 Updating appointment - ID: " + id);
+        System.out.println("👤 Current user: " + authentication.getName());
+        
+        String userRole = getUserRoleFromAuthentication(authentication);
+        String username = authentication.getName();
+        
+        try {
+            Appointment updatedAppointment = appointmentService.updateAppointment(id, appointmentDetails, userRole, username);
+            System.out.println("✅ Appointment updated successfully: " + updatedAppointment.getId());
+            return ResponseEntity.ok(updatedAppointment);
+        } catch (RuntimeException e) {
+            System.err.println("❌ Error updating appointment: " + e.getMessage());
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
@@ -191,6 +238,13 @@ public class AppointmentController {
             System.err.println("❌ Error deleting appointment: " + e.getMessage());
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<String> getAppointmentStats() {
+        String stats = appointmentService.getAppointmentStats();
+        System.out.println("📊 Appointment stats: " + stats);
+        return ResponseEntity.ok(stats);
     }
 
     // Helper method to extract user role from authentication

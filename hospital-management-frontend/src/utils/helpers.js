@@ -1,15 +1,70 @@
 import dayjs from 'dayjs';
 
+// ✅ IMPROVED: Date formatting with null checks
 export const formatDate = (date) => {
-  return dayjs(date).format('DD/MM/YYYY');
+  if (!date) return 'Not scheduled';
+  try {
+    return dayjs(date).format('DD/MM/YYYY');
+  } catch (error) {
+    console.error('Date formatting error:', error);
+    return 'Invalid Date';
+  }
 };
 
 export const formatTime = (time) => {
-  return dayjs(time, 'HH:mm:ss').format('hh:mm A');
+  if (!time) return 'Not scheduled';
+  try {
+    return dayjs(time, 'HH:mm:ss').format('hh:mm A');
+  } catch (error) {
+    console.error('Time formatting error:', error);
+    return 'Invalid Time';
+  }
 };
 
 export const formatDateTime = (date, time) => {
   return `${formatDate(date)} ${formatTime(time)}`;
+};
+
+// ✅ IMPROVED: Complete status management
+export const APPOINTMENT_STATUS = {
+  SCHEDULED: 'SCHEDULED',
+  CONFIRMED: 'CONFIRMED',
+  IN_PROGRESS: 'IN_PROGRESS',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED'
+};
+
+export const getStatusColor = (status) => {
+  const statusColors = {
+    [APPOINTMENT_STATUS.SCHEDULED]: 'primary',
+    [APPOINTMENT_STATUS.CONFIRMED]: 'info',
+    [APPOINTMENT_STATUS.IN_PROGRESS]: 'warning',
+    [APPOINTMENT_STATUS.COMPLETED]: 'success',
+    [APPOINTMENT_STATUS.CANCELLED]: 'error'
+  };
+  return statusColors[status] || 'default';
+};
+
+export const getStatusLabel = (status) => {
+  const statusLabels = {
+    [APPOINTMENT_STATUS.SCHEDULED]: 'Scheduled',
+    [APPOINTMENT_STATUS.CONFIRMED]: 'Confirmed',
+    [APPOINTMENT_STATUS.IN_PROGRESS]: 'In Progress',
+    [APPOINTMENT_STATUS.COMPLETED]: 'Completed',
+    [APPOINTMENT_STATUS.CANCELLED]: 'Cancelled'
+  };
+  return statusLabels[status] || status;
+};
+
+export const getStatusIcon = (status) => {
+  const statusIcons = {
+    [APPOINTMENT_STATUS.SCHEDULED]: '📅',
+    [APPOINTMENT_STATUS.CONFIRMED]: '✅',
+    [APPOINTMENT_STATUS.IN_PROGRESS]: '🔄',
+    [APPOINTMENT_STATUS.COMPLETED]: '✔️',
+    [APPOINTMENT_STATUS.CANCELLED]: '❌'
+  };
+  return statusIcons[status] || '📋';
 };
 
 // User roles constants
@@ -49,15 +104,6 @@ export const getUserInitials = (name) => {
     .toUpperCase() || 'U';
 };
 
-export const getStatusColor = (status) => {
-  switch (status) {
-    case 'SCHEDULED': return 'primary';
-    case 'COMPLETED': return 'success';
-    case 'CANCELLED': return 'error';
-    default: return 'default';
-  }
-};
-
 // Check if user has permission for specific actions
 export const hasPermission = (user, permission) => {
   if (!user || !user.roles) return false;
@@ -84,22 +130,17 @@ export const hasPermission = (user, permission) => {
   return user.roles.some(role => allowedRoles.includes(role));
 };
 
-export const APPOINTMENT_STATUS = {
-  SCHEDULED: 'SCHEDULED',
-  COMPLETED: 'COMPLETED',
-  CANCELLED: 'CANCELLED'
-};
-
-
 export const GENDER_OPTIONS = [
   { value: 'MALE', label: 'Male' },
   { value: 'FEMALE', label: 'Female' },
   { value: 'OTHER', label: 'Other' }
 ];
+
 export const canBookAppointments = (user) => {
   if (!user || !user.roles) return false;
   return user.roles.includes('ROLE_PATIENT') || user.roles.includes('ROLE_DOCTOR');
 };
+
 export const SPECIALIZATIONS = [
   'Cardiology',
   'Dermatology',
@@ -112,7 +153,6 @@ export const SPECIALIZATIONS = [
   'Ophthalmology',
   'Radiology'
 ];
-// Add these to your existing helpers.js file
 
 export const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
@@ -122,3 +162,23 @@ export const URGENCY_LEVELS = [
   { value: 'URGENT', label: 'Urgent Care' },
   { value: 'EMERGENCY', label: 'Emergency' }
 ];
+
+// ✅ ADDED: Data mapping helper for appointments
+export const mapAppointmentData = (appointment) => {
+  // Handle both entity and DTO formats
+  return {
+    id: appointment.id,
+    patientId: appointment.patient?.id || appointment.patientId,
+    patientName: appointment.patient?.name || appointment.patientName,
+    doctorId: appointment.doctor?.id || appointment.doctorId,
+    doctorName: appointment.doctor?.name || appointment.doctorName,
+    doctorSpecialization: appointment.doctor?.specialization || appointment.doctorSpecialization,
+    scheduleId: appointment.schedule?.id || appointment.scheduleId,
+    appointmentDate: appointment.schedule?.availableDate || appointment.appointmentDate,
+    startTime: appointment.schedule?.startTime || appointment.startTime,
+    endTime: appointment.schedule?.endTime || appointment.endTime,
+    status: appointment.status,
+    reason: appointment.reason,
+    createdDate: appointment.createdDate
+  };
+};

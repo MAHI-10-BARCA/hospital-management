@@ -175,7 +175,7 @@ const BookAppointment = () => {
   };
 
   // Handle form submission
-  // Handle form submission
+
 const handleSubmit = async (e) => {
   e.preventDefault();
   setSubmitting(true);
@@ -190,14 +190,11 @@ const handleSubmit = async (e) => {
   try {
     console.log('📅 Creating appointment with data:', formData);
     
-    // ✅ FIXED: Get the actual patient ID
     let patientId;
     
     if (hasPermission(user, 'manage_patients')) {
-      // For ADMIN/DOCTOR: Use selected patient ID
       patientId = formData.patientId === 'self' ? null : parseInt(formData.patientId);
     } else {
-      // For PATIENT: Get their actual patient profile ID
       try {
         const patientProfile = await patientService.getMyPatientProfile();
         patientId = patientProfile.id;
@@ -216,12 +213,13 @@ const handleSubmit = async (e) => {
       return;
     }
 
-    // ✅ FIXED: Include patient ID in appointment data
+    // ✅ FIXED: Include reason in appointment data
     const appointmentData = {
       patient: { id: patientId },
       doctor: { id: parseInt(formData.doctorId) },
       schedule: { id: parseInt(formData.scheduleId) },
-      status: 'SCHEDULED'
+      status: 'SCHEDULED',
+      reason: formData.reason // ✅ ADDED
     };
 
     console.log('📤 Sending appointment request:', appointmentData);

@@ -1,7 +1,10 @@
 package com.hms.entity;
 
+import java.time.LocalDateTime;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -17,28 +20,48 @@ import jakarta.persistence.Table;
 public class Appointment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "patient_id", nullable = false)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Patient patient;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "doctor_id", nullable = false)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Doctor doctor;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "schedule_id", nullable = false)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private DoctorSchedule schedule;
 
     private String status;
 
-    // Constructors, getters, and setters
-    public Appointment() {}
+    // ✅ ADDED: Reason field for appointment
+    @Column(length = 500)
+    private String reason;
+
+    // ✅ ADDED: Created date for tracking
+    @Column(name = "created_date")
+    private LocalDateTime createdDate;
+
+    // ✅ ADDED: Updated date for tracking changes
+    @Column(name = "updated_date")
+    private LocalDateTime updatedDate;
+
+    // Constructors
+    public Appointment() {
+        this.createdDate = LocalDateTime.now();
+        this.updatedDate = LocalDateTime.now();
+        this.status = "SCHEDULED"; // Default status
+    }
+
+    public Appointment(Patient patient, Doctor doctor, DoctorSchedule schedule, String reason) {
+        this();
+        this.patient = patient;
+        this.doctor = doctor;
+        this.schedule = schedule;
+        this.reason = reason;
+    }
 
     // Getters and setters
     public Long getId() { return id; }
@@ -54,5 +77,30 @@ public class Appointment {
     public void setSchedule(DoctorSchedule schedule) { this.schedule = schedule; }
     
     public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public void setStatus(String status) { 
+        this.status = status;
+        this.updatedDate = LocalDateTime.now();
+    }
+    
+    // ✅ ADDED: Reason getter/setter
+    public String getReason() { return reason; }
+    public void setReason(String reason) { this.reason = reason; }
+    
+    // ✅ ADDED: Date getters/setters
+    public LocalDateTime getCreatedDate() { return createdDate; }
+    public void setCreatedDate(LocalDateTime createdDate) { this.createdDate = createdDate; }
+    
+    public LocalDateTime getUpdatedDate() { return updatedDate; }
+    public void setUpdatedDate(LocalDateTime updatedDate) { this.updatedDate = updatedDate; }
+
+    @Override
+    public String toString() {
+        return "Appointment{" +
+                "id=" + id +
+                ", patient=" + (patient != null ? patient.getName() : "null") +
+                ", doctor=" + (doctor != null ? doctor.getName() : "null") +
+                ", status='" + status + '\'' +
+                ", reason='" + reason + '\'' +
+                '}';
+    }
 }

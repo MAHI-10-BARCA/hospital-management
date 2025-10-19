@@ -3,6 +3,7 @@ import api from './api';
 export const appointmentService = {
   getAll: async () => {
     const response = await api.get('/api/appointments');
+    console.log('📅 Appointments API response:', response.data);
     return response.data;
   },
 
@@ -15,12 +16,13 @@ export const appointmentService = {
     try {
       console.log('📅 Creating appointment:', appointmentData);
       
-      // ✅ FIXED: Send proper appointment structure
+      // ✅ FIXED: Include reason field and proper structure
       const requestData = {
-        patient: { id: appointmentData.patient?.id }, // Only send patient ID
-        doctor: { id: appointmentData.doctor.id }, // Only send doctor ID
-        schedule: { id: appointmentData.schedule.id }, // Only send schedule ID
-        status: 'SCHEDULED'
+        patient: { id: appointmentData.patient?.id },
+        doctor: { id: appointmentData.doctor.id },
+        schedule: { id: appointmentData.schedule.id },
+        status: 'SCHEDULED',
+        reason: appointmentData.reason || 'Regular checkup' // ✅ ADDED
       };
       
       console.log('📤 Sending appointment request:', requestData);
@@ -28,7 +30,6 @@ export const appointmentService = {
       return response.data;
     } catch (error) {
       console.error('❌ Error creating appointment:', error);
-      // Handle admin booking restriction error
       if (error.response?.data?.includes('Admins are not allowed')) {
         throw new Error('Admins cannot book appointments. Please use a patient account.');
       }
@@ -54,6 +55,12 @@ export const appointmentService = {
     return response.data;
   },
 
+  // ✅ ADDED: Full appointment update
+  update: async (id, appointmentData) => {
+    const response = await api.put(`/api/appointments/${id}`, appointmentData);
+    return response.data;
+  },
+
   cancel: async (id) => {
     const response = await api.put(`/api/appointments/${id}/cancel`);
     return response.data;
@@ -61,5 +68,17 @@ export const appointmentService = {
 
   delete: async (id) => {
     await api.delete(`/api/appointments/${id}`);
+  },
+
+  // ✅ ADDED: Get appointments by status
+  getByStatus: async (status) => {
+    const response = await api.get(`/api/appointments/status/${status}`);
+    return response.data;
+  },
+
+  // ✅ ADDED: Get appointment statistics
+  getStats: async () => {
+    const response = await api.get('/api/appointments/stats');
+    return response.data;
   }
 };
