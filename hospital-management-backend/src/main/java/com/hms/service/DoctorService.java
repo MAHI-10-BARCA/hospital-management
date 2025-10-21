@@ -1,7 +1,7 @@
 package com.hms.service;
 
 import java.util.List;
-import java.util.Optional; // ✅ ADD THIS IMPORT
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
@@ -52,7 +52,7 @@ public class DoctorService {
         return doctorRepository.save(doctorDetails);
     }
 
-    // ✅ ADD THIS: Auto-create doctor profile if not exists
+    // ✅ FIXED: Auto-create doctor profile if not exists
     public Doctor getOrCreateDoctorForUser(Long userId) {
         // Try to find existing doctor
         Optional<Doctor> existingDoctor = doctorRepository.findByUserId(userId);
@@ -70,6 +70,7 @@ public class DoctorService {
         newDoctor.setContact("Not provided"); // Default contact
         newDoctor.setUser(user);
         
+        System.out.println("✅ Auto-creating doctor profile for user ID: " + userId);
         return doctorRepository.save(newDoctor);
     }
 
@@ -84,5 +85,13 @@ public class DoctorService {
             doctor.setContact(updatedDoctor.getContact());
             return doctorRepository.save(doctor);
         }).orElseThrow(() -> new RuntimeException("Doctor not found"));
+    }
+
+    // ✅ ADD THIS: Get current doctor profile
+    public Doctor getCurrentDoctor(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return doctorRepository.findByUser(user)
+                .orElseThrow(() -> new RuntimeException("Doctor profile not found"));
     }
 }

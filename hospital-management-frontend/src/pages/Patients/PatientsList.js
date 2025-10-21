@@ -10,12 +10,14 @@ import {
   IconButton,
   TextField,
   Alert,
+  alpha,
 } from '@mui/material';
 import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Person as PatientIcon,
+  Search as SearchIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
@@ -90,10 +92,20 @@ const PatientsList = () => {
   if (loading) return <LoadingSpinner />;
 
   return (
-    <Box>
+    <Box sx={{ p: 3 }}>
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Typography variant="h4" component="h1" fontWeight="bold">
+        <Typography 
+          variant="h4" 
+          component="h1" 
+          fontWeight="bold"
+          sx={{
+            background: 'linear-gradient(135deg, #1e293b 0%, #475569 100%)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            color: 'transparent',
+          }}
+        >
           Patients
         </Typography>
         {hasPermission(user, 'manage_patients') && (
@@ -101,7 +113,17 @@ const PatientsList = () => {
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => navigate('/patients/add')}
-            sx={{ borderRadius: 2 }}
+            sx={{
+              borderRadius: '12px',
+              px: 3,
+              py: 1,
+              background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #7c51e0 0%, #6d28d9 100%)',
+                transform: 'translateY(-1px)',
+              },
+              transition: 'all 0.3s ease',
+            }}
           >
             Add Patient
           </Button>
@@ -109,24 +131,57 @@ const PatientsList = () => {
       </Box>
 
       {/* Search Bar */}
-      <Card sx={{ mb: 3, borderRadius: 3 }}>
-        <CardContent>
+      <Card 
+        sx={{ 
+          mb: 4, 
+          borderRadius: '24px',
+          background: 'rgba(255, 255, 255, 0.7)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.3)',
+          boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
+        }}
+      >
+        <CardContent sx={{ p: 4 }}>
           <TextField
             fullWidth
             variant="outlined"
             placeholder="Search patients by name or gender..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            sx={{ mb: 2 }}
+            InputProps={{
+              startAdornment: (
+                <SearchIcon sx={{ color: '#64748b', mr: 1 }} />
+              ),
+              sx: {
+                borderRadius: '12px',
+                background: 'rgba(255, 255, 255, 0.8)',
+                backdropFilter: 'blur(10px)',
+              }
+            }}
           />
-          <Typography variant="body2" color="textSecondary">
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              color: '#64748b', 
+              mt: 2,
+              fontWeight: 500,
+            }}
+          >
             {filteredPatients.length} patients found
           </Typography>
         </CardContent>
       </Card>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
+        <Alert 
+          severity="error" 
+          sx={{ 
+            mb: 3, 
+            borderRadius: '12px',
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.2)',
+          }}
+        >
           {error}
         </Alert>
       )}
@@ -138,60 +193,102 @@ const PatientsList = () => {
             <Card
               sx={{
                 height: '100%',
-                transition: 'transform 0.2s, box-shadow 0.2s',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: '0 8px 16px rgba(0,0,0,0.1)',
+                transition: 'all 0.3s ease',
+                background: 'rgba(255, 255, 255, 0.7)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                borderRadius: '20px',
+                boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '4px',
+                  background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
                 },
-                borderRadius: 3,
+                '&:hover': {
+                  transform: 'translateY(-8px)',
+                  boxShadow: '0 20px 40px 0 rgba(31, 38, 135, 0.15)',
+                },
               }}
             >
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <CardContent sx={{ p: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                   <Box
                     sx={{
-                      backgroundColor: 'secondary.light',
-                      borderRadius: 2,
-                      p: 1,
+                      background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                      borderRadius: '14px',
+                      p: 2,
                       mr: 2,
+                      boxShadow: '0 4px 14px 0 rgba(139, 92, 246, 0.3)',
                     }}
                   >
-                    <PatientIcon sx={{ color: 'white', fontSize: 32 }} />
+                    <PatientIcon sx={{ color: 'white', fontSize: 28 }} />
                   </Box>
                   <Box>
-                    <Typography variant="h6" component="h2" fontWeight="bold">
+                    <Typography 
+                      variant="h6" 
+                      component="h2" 
+                      fontWeight="bold"
+                      sx={{ color: '#1e293b' }}
+                    >
                       {patient.name}
                     </Typography>
                     <Chip
                       label={getGenderLabel(patient.gender)}
                       size="small"
-                      color="secondary"
-                      variant="outlined"
-                      sx={{ mt: 0.5 }}
+                      sx={{
+                        mt: 1,
+                        background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                        color: 'white',
+                        fontWeight: '600',
+                        fontSize: '0.75rem',
+                      }}
                     />
                   </Box>
                 </Box>
 
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" color="textSecondary">
+                <Box sx={{ mb: 3 }}>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: '#64748b',
+                      fontWeight: 500,
+                      mb: 0.5,
+                    }}
+                  >
                     Age: {patient.age} years
                   </Typography>
-                  <Typography variant="body2" color="textSecondary">
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: '#64748b',
+                      fontWeight: 500,
+                    }}
+                  >
                     ID: {patient.id}
                   </Typography>
                 </Box>
 
                 {hasPermission(user, 'manage_patients') && (
-                  <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
                     <IconButton
                       size="small"
                       onClick={() => handleEdit(patient)}
                       sx={{
-                        backgroundColor: 'primary.light',
-                        color: 'white',
+                        background: 'rgba(99, 102, 241, 0.1)',
+                        border: '1px solid rgba(99, 102, 241, 0.2)',
+                        borderRadius: '8px',
+                        color: '#6366f1',
                         '&:hover': {
-                          backgroundColor: 'primary.main',
+                          background: 'rgba(99, 102, 241, 0.15)',
+                          transform: 'translateY(-1px)',
                         },
+                        transition: 'all 0.3s ease',
                       }}
                     >
                       <EditIcon fontSize="small" />
@@ -200,11 +297,15 @@ const PatientsList = () => {
                       size="small"
                       onClick={() => handleDeleteClick(patient)}
                       sx={{
-                        backgroundColor: 'error.light',
-                        color: 'white',
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        border: '1px solid rgba(239, 68, 68, 0.2)',
+                        borderRadius: '8px',
+                        color: '#ef4444',
                         '&:hover': {
-                          backgroundColor: 'error.main',
+                          background: 'rgba(239, 68, 68, 0.15)',
+                          transform: 'translateY(-1px)',
                         },
+                        transition: 'all 0.3s ease',
                       }}
                     >
                       <DeleteIcon fontSize="small" />
@@ -218,11 +319,28 @@ const PatientsList = () => {
       </Grid>
 
       {filteredPatients.length === 0 && !loading && (
-        <Card sx={{ textAlign: 'center', p: 4, borderRadius: 3 }}>
-          <Typography variant="h6" color="textSecondary">
+        <Card 
+          sx={{ 
+            textAlign: 'center', 
+            p: 6, 
+            borderRadius: '24px',
+            background: 'rgba(255, 255, 255, 0.7)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+          }}
+        >
+          <PatientIcon sx={{ fontSize: 64, color: '#cbd5e1', mb: 2, opacity: 0.7 }} />
+          <Typography 
+            variant="h6" 
+            sx={{ 
+              color: '#64748b', 
+              mb: 1,
+              fontWeight: 600,
+            }}
+          >
             No patients found
           </Typography>
-          <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+          <Typography variant="body2" sx={{ color: '#94a3b8', fontWeight: 500 }}>
             {searchTerm ? 'Try adjusting your search terms' : 'Get started by adding your first patient'}
           </Typography>
         </Card>

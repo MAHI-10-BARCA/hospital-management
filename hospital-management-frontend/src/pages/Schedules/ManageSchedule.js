@@ -10,7 +10,6 @@ import {
   Alert,
   Chip,
   IconButton,
-  Paper,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -57,8 +56,6 @@ const ManageSchedule = () => {
 
   useEffect(() => {
     if (user && user.id) {
-      console.log('👤 Current user in ManageSchedule:', user);
-      console.log('🆔 User ID:', user.id);
       loadSchedules();
     }
   }, [user]);
@@ -66,19 +63,10 @@ const ManageSchedule = () => {
   const loadSchedules = async () => {
     try {
       setLoading(true);
-      console.log('🔄 Loading schedules for user ID:', user.id);
-      
-      if (!user.id) {
-        throw new Error('User ID not available');
-      }
-
-      // ✅ UPDATED: Use getDoctorOwnSchedules with user ID
       const data = await scheduleService.getDoctorOwnSchedules(user.id);
-      console.log('✅ Schedules loaded:', data);
-      
       setSchedules(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('❌ Error loading schedules:', err);
+      console.error('Error loading schedules:', err);
       setError('Failed to load schedules: ' + (err.message || 'Unknown error'));
       enqueueSnackbar('Failed to load schedules', { variant: 'error' });
     } finally {
@@ -129,12 +117,11 @@ const ManageSchedule = () => {
 
   const handleDeleteConfirm = async () => {
     try {
-      console.log('🗑️ Deleting schedule:', scheduleToDelete.id);
       await scheduleService.delete(scheduleToDelete.id);
       setSchedules(schedules.filter(s => s.id !== scheduleToDelete.id));
       enqueueSnackbar('Schedule deleted successfully', { variant: 'success' });
     } catch (err) {
-      console.error('❌ Error deleting schedule:', err);
+      console.error('Error deleting schedule:', err);
       enqueueSnackbar('Failed to delete schedule: ' + (err.response?.data?.message || err.message), { variant: 'error' });
     } finally {
       setDeleteDialogOpen(false);
@@ -174,56 +161,51 @@ const ManageSchedule = () => {
     return true;
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  
-  if (!user.id) {
-    setError('Cannot save schedule: User ID not available');
-    return;
-  }
-
-  setSubmitting(true);
-  setError('');
-
-  if (!validateForm()) {
-    setSubmitting(false);
-    return;
-  }
-
-  try {
-    const scheduleData = {
-      doctorId: user.id, // ✅ FIXED: Include doctorId in the request
-      availableDate: formData.availableDate,
-      startTime: formData.startTime,
-      endTime: formData.endTime,
-      slotDuration: parseInt(formData.slotDuration),
-      maxPatients: parseInt(formData.maxPatients),
-    };
-
-    console.log('💾 Saving schedule for user:', user.id);
-    console.log('📅 Schedule data:', scheduleData);
-
-    if (editingSchedule) {
-      // ✅ FIXED: For update, just send the schedule data with doctorId
-      await scheduleService.update(editingSchedule.id, scheduleData);
-      enqueueSnackbar('Schedule updated successfully!', { variant: 'success' });
-    } else {
-      // For create, use createDoctorSchedule with user ID
-      await scheduleService.createDoctorSchedule(user.id, scheduleData);
-      enqueueSnackbar('Schedule created successfully!', { variant: 'success' });
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!user.id) {
+      setError('Cannot save schedule: User ID not available');
+      return;
     }
 
-    handleCloseDialog();
-    loadSchedules();
-  } catch (err) {
-    console.error('❌ Error saving schedule:', err);
-    const errorMessage = err.response?.data?.message || err.message || 'Failed to save schedule';
-    setError(errorMessage);
-    enqueueSnackbar('Failed to save schedule: ' + errorMessage, { variant: 'error' });
-  } finally {
-    setSubmitting(false);
-  }
-};
+    setSubmitting(true);
+    setError('');
+
+    if (!validateForm()) {
+      setSubmitting(false);
+      return;
+    }
+
+    try {
+      const scheduleData = {
+        doctorId: user.id,
+        availableDate: formData.availableDate,
+        startTime: formData.startTime,
+        endTime: formData.endTime,
+        slotDuration: parseInt(formData.slotDuration),
+        maxPatients: parseInt(formData.maxPatients),
+      };
+
+      if (editingSchedule) {
+        await scheduleService.update(editingSchedule.id, scheduleData);
+        enqueueSnackbar('Schedule updated successfully!', { variant: 'success' });
+      } else {
+        await scheduleService.createDoctorSchedule(user.id, scheduleData);
+        enqueueSnackbar('Schedule created successfully!', { variant: 'success' });
+      }
+
+      handleCloseDialog();
+      loadSchedules();
+    } catch (err) {
+      console.error('Error saving schedule:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to save schedule';
+      setError(errorMessage);
+      enqueueSnackbar('Failed to save schedule: ' + errorMessage, { variant: 'error' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const getTimeSlots = (schedule) => {
     const slots = [];
@@ -248,24 +230,45 @@ const handleSubmit = async (e) => {
   if (loading) return <LoadingSpinner />;
 
   return (
-    <Box>
+    <Box sx={{ 
+      background: 'linear-gradient(135deg, #f0f4ff 0%, #f8fafc 100%)',
+      minHeight: '100vh',
+      p: 3
+    }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Typography variant="h4" component="h1" fontWeight="bold">
+        <Typography 
+          variant="h4" 
+          component="h1" 
+          fontWeight="bold"
+          sx={{ color: 'text.primary' }}
+        >
           Manage Schedule
         </Typography>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => handleOpenDialog()}
-          sx={{ borderRadius: 2 }}
           disabled={!user.id}
+          sx={{
+            background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
+            borderRadius: '12px',
+            fontWeight: 600,
+            textTransform: 'none',
+            px: 3,
+            '&:hover': {
+              transform: 'translateY(-2px)',
+              boxShadow: '0 8px 25px rgba(99, 102, 241, 0.4)',
+              background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
+            },
+            transition: 'all 0.3s ease'
+          }}
         >
           Add Time Slot
         </Button>
       </Box>
 
       {!user.id && (
-        <Alert severity="error" sx={{ mb: 3 }}>
+        <Alert severity="error" sx={{ mb: 3, borderRadius: '12px' }}>
           <Typography variant="body1" fontWeight="bold">
             Authentication Issue
           </Typography>
@@ -276,21 +279,14 @@ const handleSubmit = async (e) => {
       )}
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
+        <Alert severity="error" sx={{ mb: 3, borderRadius: '12px' }}>
           {error}
         </Alert>
       )}
 
-      {/* Debug Info */}
-      <Alert severity="info" sx={{ mb: 3 }}>
-        <Typography variant="body2">
-          <strong>Debug Info:</strong> User ID: {user?.id} | Username: {user?.username} | Schedules loaded: {schedules.length}
-        </Typography>
-      </Alert>
-
       {schedules.length === 0 ? (
-        <Card sx={{ textAlign: 'center', p: 6, borderRadius: 3 }}>
-          <ScheduleIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+        <Card sx={{ textAlign: 'center', p: 6, borderRadius: '20px' }}>
+          <ScheduleIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2, opacity: 0.7 }} />
           <Typography variant="h6" color="textSecondary" gutterBottom>
             No Schedule Available
           </Typography>
@@ -302,6 +298,19 @@ const handleSubmit = async (e) => {
             startIcon={<AddIcon />}
             onClick={() => handleOpenDialog()}
             disabled={!user.id}
+            sx={{
+              background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
+              borderRadius: '12px',
+              fontWeight: 600,
+              textTransform: 'none',
+              px: 3,
+              '&:hover': {
+                transform: 'translateY(-2px)',
+                boxShadow: '0 8px 25px rgba(99, 102, 241, 0.4)',
+                background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
+              },
+              transition: 'all 0.3s ease'
+            }}
           >
             Add Your First Time Slot
           </Button>
@@ -312,7 +321,7 @@ const handleSubmit = async (e) => {
             const timeSlots = getTimeSlots(schedule);
             return (
               <Grid item xs={12} md={6} key={schedule.id}>
-                <Card sx={{ borderRadius: 3 }}>
+                <Card sx={{ borderRadius: '20px' }}>
                   <CardContent>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                       <Box>
@@ -327,14 +336,24 @@ const handleSubmit = async (e) => {
                         <IconButton
                           size="small"
                           onClick={() => handleOpenDialog(schedule)}
-                          sx={{ color: 'primary.main' }}
+                          sx={{ 
+                            color: 'primary.main',
+                            '&:hover': {
+                              backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                            }
+                          }}
                         >
                           <EditIcon />
                         </IconButton>
                         <IconButton
                           size="small"
                           onClick={() => handleDeleteClick(schedule)}
-                          sx={{ color: 'error.main' }}
+                          sx={{ 
+                            color: 'error.main',
+                            '&:hover': {
+                              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            }
+                          }}
                         >
                           <DeleteIcon />
                         </IconButton>
@@ -347,28 +366,24 @@ const handleSubmit = async (e) => {
                         label={`${schedule.slotDuration}min slots`}
                         size="small"
                         variant="outlined"
+                        sx={{ borderRadius: '8px' }}
                       />
                       <Chip
                         label={`${schedule.maxPatients} patients max`}
                         size="small"
                         variant="outlined"
                         color="primary"
+                        sx={{ borderRadius: '8px' }}
                       />
                       <Chip
                         label={schedule.isBooked ? 'Booked' : 'Available'}
                         color={schedule.isBooked ? 'error' : 'success'}
                         size="small"
+                        sx={{ borderRadius: '8px' }}
                       />
-                      {schedule.createdBy && (
-                        <Chip
-                          label={`Created by: ${schedule.createdBy}`}
-                          variant="outlined"
-                          size="small"
-                        />
-                      )}
                     </Box>
 
-                    <Typography variant="subtitle2" gutterBottom>
+                    <Typography variant="subtitle2" gutterBottom sx={{ color: 'text.primary' }}>
                       Available Time Slots:
                     </Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
@@ -379,6 +394,7 @@ const handleSubmit = async (e) => {
                           size="small"
                           color="success"
                           variant="outlined"
+                          sx={{ borderRadius: '6px' }}
                         />
                       ))}
                       {timeSlots.length > 6 && (
@@ -386,6 +402,7 @@ const handleSubmit = async (e) => {
                           label={`+${timeSlots.length - 6} more`}
                           size="small"
                           variant="outlined"
+                          sx={{ borderRadius: '6px' }}
                         />
                       )}
                     </Box>
@@ -403,15 +420,23 @@ const handleSubmit = async (e) => {
         onClose={handleCloseDialog}
         maxWidth="sm"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '20px',
+            background: 'rgba(255, 255, 255, 0.8)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+          }
+        }}
       >
         <DialogTitle>
-          <Typography variant="h6" fontWeight="bold">
+          <Typography variant="h6" fontWeight="bold" sx={{ color: 'text.primary' }}>
             {editingSchedule ? 'Edit Time Slot' : 'Add Time Slot'}
           </Typography>
         </DialogTitle>
         <DialogContent>
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert severity="error" sx={{ mb: 2, borderRadius: '12px' }}>
               {error}
             </Alert>
           )}
@@ -427,6 +452,14 @@ const handleSubmit = async (e) => {
                   onChange={handleChange}
                   required
                   InputLabelProps={{ shrink: true }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      '&:hover fieldset': {
+                        borderColor: 'primary.main',
+                      },
+                    },
+                  }}
                 />
               </Grid>
               <Grid item xs={6}>
@@ -439,6 +472,11 @@ const handleSubmit = async (e) => {
                   onChange={handleChange}
                   required
                   InputLabelProps={{ shrink: true }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                    },
+                  }}
                 />
               </Grid>
               <Grid item xs={6}>
@@ -451,6 +489,11 @@ const handleSubmit = async (e) => {
                   onChange={handleChange}
                   required
                   InputLabelProps={{ shrink: true }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                    },
+                  }}
                 />
               </Grid>
               <Grid item xs={6}>
@@ -461,6 +504,9 @@ const handleSubmit = async (e) => {
                     value={formData.slotDuration}
                     onChange={handleChange}
                     label="Slot Duration"
+                    sx={{
+                      borderRadius: '12px',
+                    }}
                   >
                     <MenuItem value={15}>15 minutes</MenuItem>
                     <MenuItem value={30}>30 minutes</MenuItem>
@@ -479,17 +525,45 @@ const handleSubmit = async (e) => {
                   onChange={handleChange}
                   required
                   inputProps={{ min: 1, max: 50 }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                    },
+                  }}
                 />
               </Grid>
             </Grid>
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
+          <Button 
+            onClick={handleCloseDialog}
+            sx={{
+              borderRadius: '12px',
+              textTransform: 'none',
+              fontWeight: 600,
+              px: 3
+            }}
+          >
+            Cancel
+          </Button>
           <Button
             onClick={handleSubmit}
             variant="contained"
             disabled={submitting}
+            sx={{
+              background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
+              borderRadius: '12px',
+              textTransform: 'none',
+              fontWeight: 600,
+              px: 3,
+              '&:hover': {
+                transform: 'translateY(-2px)',
+                boxShadow: '0 8px 25px rgba(99, 102, 241, 0.4)',
+                background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
+              },
+              transition: 'all 0.3s ease'
+            }}
           >
             {submitting ? 'Saving...' : (editingSchedule ? 'Update' : 'Add')}
           </Button>

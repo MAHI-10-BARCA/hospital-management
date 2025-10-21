@@ -37,7 +37,7 @@ public class AppointmentController {
         System.out.println("📅 Creating appointment for user: " + username);
         
         try {
-            AppointmentResponseDTO createdAppointment = appointmentService.createAppointment(appointment);
+            AppointmentResponseDTO createdAppointment = appointmentService.createAppointment(appointment, username);
             return ResponseEntity.ok(createdAppointment);
         } catch (RuntimeException e) {
             System.err.println("❌ Error creating appointment: " + e.getMessage());
@@ -51,7 +51,7 @@ public class AppointmentController {
         System.out.println("📅 Fetching appointments for user: " + username);
         
         try {
-            List<AppointmentResponseDTO> appointments = appointmentService.getAllAppointments();
+            List<AppointmentResponseDTO> appointments = appointmentService.getAllAppointments(username);
             return ResponseEntity.ok(appointments);
         } catch (Exception e) {
             System.err.println("❌ Error fetching appointments: " + e.getMessage());
@@ -60,57 +60,70 @@ public class AppointmentController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getAppointmentById(@PathVariable Long id) {
+    public ResponseEntity<?> getAppointmentById(
+            @PathVariable Long id,
+            Authentication authentication) {
+        
+        String username = authentication.getName();
+        System.out.println("🔍 Fetching appointment " + id + " for user: " + username);
+        
         try {
-            AppointmentResponseDTO appointment = appointmentService.getAppointmentById(id);
+            AppointmentResponseDTO appointment = appointmentService.getAppointmentById(id, username);
             return ResponseEntity.ok(appointment);
         } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
+            System.err.println("❌ Error fetching appointment: " + e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
     @GetMapping("/patient/{patientId}")
-    public ResponseEntity<List<AppointmentResponseDTO>> getAppointmentsByPatient(@PathVariable Long patientId) {
+    public ResponseEntity<List<AppointmentResponseDTO>> getAppointmentsByPatient(
+            @PathVariable Long patientId,
+            Authentication authentication) {
+        
+        String username = authentication.getName();
+        System.out.println("📅 Fetching appointments for patient " + patientId + " by user: " + username);
+        
         try {
-            List<AppointmentResponseDTO> appointments = appointmentService.getAppointmentsByPatient(patientId);
+            List<AppointmentResponseDTO> appointments = appointmentService.getAppointmentsByPatient(patientId, username);
             return ResponseEntity.ok(appointments);
         } catch (Exception e) {
+            System.err.println("❌ Error fetching patient appointments: " + e.getMessage());
             return ResponseEntity.internalServerError().build();
         }
     }
 
     @GetMapping("/doctor/{doctorId}")
-    public ResponseEntity<List<AppointmentResponseDTO>> getAppointmentsByDoctor(@PathVariable Long doctorId) {
+    public ResponseEntity<List<AppointmentResponseDTO>> getAppointmentsByDoctor(
+            @PathVariable Long doctorId,
+            Authentication authentication) {
+        
+        String username = authentication.getName();
+        System.out.println("📅 Fetching appointments for doctor " + doctorId + " by user: " + username);
+        
         try {
-            List<AppointmentResponseDTO> appointments = appointmentService.getAppointmentsByDoctor(doctorId);
+            List<AppointmentResponseDTO> appointments = appointmentService.getAppointmentsByDoctor(doctorId, username);
             return ResponseEntity.ok(appointments);
         } catch (Exception e) {
+            System.err.println("❌ Error fetching doctor appointments: " + e.getMessage());
             return ResponseEntity.internalServerError().build();
         }
     }
 
     @GetMapping("/status/{status}")
-    public ResponseEntity<List<AppointmentResponseDTO>> getAppointmentsByStatus(@PathVariable String status) {
-        try {
-            List<AppointmentResponseDTO> appointments = appointmentService.getAppointmentsByStatus(status);
-            return ResponseEntity.ok(appointments);
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
-        }
-    }
-
-    @GetMapping("/my-appointments")
-    public ResponseEntity<?> getMyAppointments(Authentication authentication) {
+    public ResponseEntity<List<AppointmentResponseDTO>> getAppointmentsByStatus(
+            @PathVariable String status,
+            Authentication authentication) {
+        
         String username = authentication.getName();
-        System.out.println("📅 Fetching appointments for current user: " + username);
+        System.out.println("📅 Fetching " + status + " appointments for user: " + username);
         
         try {
-            // For now, return all appointments - you can implement user-specific filtering later
-            List<AppointmentResponseDTO> appointments = appointmentService.getAllAppointments();
+            List<AppointmentResponseDTO> appointments = appointmentService.getAppointmentsByStatus(status, username);
             return ResponseEntity.ok(appointments);
         } catch (Exception e) {
-            System.err.println("❌ Error fetching user appointments: " + e.getMessage());
-            return ResponseEntity.internalServerError().body("Error fetching appointments");
+            System.err.println("❌ Error fetching appointments by status: " + e.getMessage());
+            return ResponseEntity.internalServerError().build();
         }
     }
 
@@ -159,7 +172,7 @@ public class AppointmentController {
         System.out.println("✏️ Updating appointment " + id + " by user: " + username);
         
         try {
-            AppointmentResponseDTO updatedAppointment = appointmentService.updateAppointment(id, appointmentUpdates);
+            AppointmentResponseDTO updatedAppointment = appointmentService.updateAppointment(id, appointmentUpdates, username);
             return ResponseEntity.ok(updatedAppointment);
         } catch (RuntimeException e) {
             System.err.println("❌ Error updating appointment: " + e.getMessage());
@@ -176,7 +189,7 @@ public class AppointmentController {
         System.out.println("🗑️ Deleting appointment " + id + " by user: " + username);
         
         try {
-            appointmentService.deleteAppointment(id);
+            appointmentService.deleteAppointment(id, username);
             return ResponseEntity.noContent().build();
         } catch (RuntimeException e) {
             System.err.println("❌ Error deleting appointment: " + e.getMessage());
@@ -185,10 +198,12 @@ public class AppointmentController {
     }
 
     @GetMapping("/stats")
-    public ResponseEntity<?> getAppointmentStats() {
+    public ResponseEntity<?> getAppointmentStats(Authentication authentication) {
+        String username = authentication.getName();
+        System.out.println("📊 Fetching appointment stats for user: " + username);
+        
         try {
-            // For now, return basic stats - you can implement proper statistics later
-            List<AppointmentResponseDTO> allAppointments = appointmentService.getAllAppointments();
+            List<AppointmentResponseDTO> allAppointments = appointmentService.getAllAppointments(username);
             
             long total = allAppointments.size();
             long scheduled = allAppointments.stream().filter(a -> "SCHEDULED".equals(a.getStatus())).count();

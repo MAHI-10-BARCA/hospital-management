@@ -9,6 +9,7 @@ import {
   Alert,
   InputAdornment,
   IconButton,
+  alpha,
 } from '@mui/material';
 import {
   Visibility,
@@ -29,7 +30,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const { login, user } = useAuth(); // Add user to check auth state
+  const { login, user } = useAuth();
   const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
 
@@ -51,7 +52,6 @@ const Login = () => {
       await login(credentials);
       console.log('✅ Login successful, checking user state...');
       
-      // Wait a moment for the auth state to update
       setTimeout(() => {
         console.log('🔄 Checking if user is authenticated...');
         if (user) {
@@ -97,8 +97,11 @@ const Login = () => {
           p: 4,
           maxWidth: 400,
           width: '100%',
-          borderRadius: 3,
-          boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+          borderRadius: '24px',
+          background: 'rgba(255, 255, 255, 0.8)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.3)',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
         }}
       >
         <Box sx={{ textAlign: 'center', mb: 4 }}>
@@ -108,24 +111,32 @@ const Login = () => {
             gutterBottom
             sx={{
               fontWeight: 700,
-              background: 'linear-gradient(45deg, #667eea, #764ba2)',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               backgroundClip: 'text',
               WebkitBackgroundClip: 'text',
               color: 'transparent',
             }}
           >
-            Hospital HMS
+            🏥 Hospital HMS
           </Typography>
-          <Typography variant="h6" color="textSecondary" gutterBottom>
+          <Typography variant="h6" sx={{ color: '#64748b', mb: 1, fontWeight: 500 }}>
             Welcome Back
           </Typography>
-          <Typography variant="body2" color="textSecondary">
+          <Typography variant="body2" sx={{ color: '#94a3b8', fontWeight: 500 }}>
             Sign in to your account
           </Typography>
         </Box>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert 
+            severity="error" 
+            sx={{ 
+              mb: 3,
+              borderRadius: '12px',
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.2)',
+            }}
+          >
             {error}
           </Alert>
         )}
@@ -139,10 +150,17 @@ const Login = () => {
             onChange={handleChange}
             required
             margin="normal"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '12px',
+                background: 'rgba(255, 255, 255, 0.8)',
+                backdropFilter: 'blur(10px)',
+              }
+            }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Person color="action" />
+                  <Person sx={{ color: '#64748b' }} />
                 </InputAdornment>
               ),
             }}
@@ -156,10 +174,17 @@ const Login = () => {
             onChange={handleChange}
             required
             margin="normal"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '12px',
+                background: 'rgba(255, 255, 255, 0.8)',
+                backdropFilter: 'blur(10px)',
+              }
+            }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Lock color="action" />
+                  <Lock sx={{ color: '#64748b' }} />
                 </InputAdornment>
               ),
               endAdornment: (
@@ -168,6 +193,7 @@ const Login = () => {
                     aria-label="toggle password visibility"
                     onClick={handleClickShowPassword}
                     edge="end"
+                    sx={{ color: '#64748b' }}
                   >
                     {showPassword ? <VisibilityOff /> : <Visibility />}
                   </IconButton>
@@ -185,9 +211,16 @@ const Login = () => {
               mt: 3,
               mb: 2,
               py: 1.5,
-              borderRadius: 2,
+              borderRadius: '12px',
               textTransform: 'none',
               fontSize: '1rem',
+              fontWeight: 600,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #5b6bd9 0%, #6a4599 100%)',
+                transform: 'translateY(-1px)',
+              },
+              transition: 'all 0.3s ease',
             }}
           >
             {loading ? 'Signing In...' : 'Sign In'}
@@ -195,7 +228,7 @@ const Login = () => {
         </Box>
 
         <Box sx={{ textAlign: 'center' }}>
-          <Typography variant="body2" color="textSecondary">
+          <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>
             Don't have an account?{' '}
             <Link
               component={RouterLink}
@@ -203,6 +236,7 @@ const Login = () => {
               sx={{
                 textDecoration: 'none',
                 fontWeight: 600,
+                color: '#6366f1',
                 '&:hover': {
                   textDecoration: 'underline',
                 },

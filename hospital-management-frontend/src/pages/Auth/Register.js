@@ -13,6 +13,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  alpha,
 } from '@mui/material';
 import {
   Visibility,
@@ -29,7 +30,7 @@ const Register = () => {
     username: '',
     password: '',
     confirmPassword: '',
-    roles: ['ROLE_USER'], // Default role
+    roles: ['ROLE_USER'],
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -62,7 +63,6 @@ const Register = () => {
     setLoading(true);
     setError('');
 
-    // Validation
     if (!userData.username || !userData.password || !userData.confirmPassword) {
       setError('All fields are required');
       setLoading(false);
@@ -82,22 +82,19 @@ const Register = () => {
     }
 
     try {
-      // FIX: Create proper registration data with correct field names
       const registrationData = {
         username: userData.username.trim(),
-        password: userData.password, // Make sure this is not null/empty
+        password: userData.password,
         roles: userData.roles
       };
       
       console.log('📝 Registering user with data:', registrationData);
-      console.log('🔑 Password length:', registrationData.password?.length);
       
       await register(registrationData);
       enqueueSnackbar('Registration successful! Please login.', { variant: 'success' });
       navigate('/login');
     } catch (err) {
       console.error('❌ Registration error:', err);
-      console.error('📡 Error response:', err.response?.data);
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
       enqueueSnackbar('Registration failed!', { variant: 'error' });
     } finally {
@@ -129,8 +126,11 @@ const Register = () => {
           p: 4,
           maxWidth: 450,
           width: '100%',
-          borderRadius: 3,
-          boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+          borderRadius: '24px',
+          background: 'rgba(255, 255, 255, 0.8)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.3)',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
         }}
       >
         <Box sx={{ textAlign: 'center', mb: 4 }}>
@@ -140,24 +140,32 @@ const Register = () => {
             gutterBottom
             sx={{
               fontWeight: 700,
-              background: 'linear-gradient(45deg, #667eea, #764ba2)',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               backgroundClip: 'text',
               WebkitBackgroundClip: 'text',
               color: 'transparent',
             }}
           >
-            Hospital HMS
+            🏥 Hospital HMS
           </Typography>
-          <Typography variant="h6" color="textSecondary" gutterBottom>
+          <Typography variant="h6" sx={{ color: '#64748b', mb: 1, fontWeight: 500 }}>
             Create Account
           </Typography>
-          <Typography variant="body2" color="textSecondary">
+          <Typography variant="body2" sx={{ color: '#94a3b8', fontWeight: 500 }}>
             Sign up to get started
           </Typography>
         </Box>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert 
+            severity="error" 
+            sx={{ 
+              mb: 3,
+              borderRadius: '12px',
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.2)',
+            }}
+          >
             {error}
           </Alert>
         )}
@@ -171,10 +179,17 @@ const Register = () => {
             onChange={handleChange}
             required
             margin="normal"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '12px',
+                background: 'rgba(255, 255, 255, 0.8)',
+                backdropFilter: 'blur(10px)',
+              }
+            }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Person color="action" />
+                  <Person sx={{ color: '#64748b' }} />
                 </InputAdornment>
               ),
             }}
@@ -188,6 +203,14 @@ const Register = () => {
               onChange={handleRoleChange}
               label="Select Role *"
               required
+              sx={{
+                borderRadius: '12px',
+                background: 'rgba(255, 255, 255, 0.8)',
+                backdropFilter: 'blur(10px)',
+                '& .MuiOutlinedInput-notchedOutline': {
+                  border: 'none',
+                }
+              }}
             >
               <MenuItem value="ROLE_ADMIN">Administrator</MenuItem>
               <MenuItem value="ROLE_DOCTOR">Doctor</MenuItem>
@@ -205,10 +228,17 @@ const Register = () => {
             onChange={handleChange}
             required
             margin="normal"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '12px',
+                background: 'rgba(255, 255, 255, 0.8)',
+                backdropFilter: 'blur(10px)',
+              }
+            }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Lock color="action" />
+                  <Lock sx={{ color: '#64748b' }} />
                 </InputAdornment>
               ),
               endAdornment: (
@@ -217,6 +247,7 @@ const Register = () => {
                     aria-label="toggle password visibility"
                     onClick={handleClickShowPassword}
                     edge="end"
+                    sx={{ color: '#64748b' }}
                   >
                     {showPassword ? <VisibilityOff /> : <Visibility />}
                   </IconButton>
@@ -234,10 +265,17 @@ const Register = () => {
             onChange={handleChange}
             required
             margin="normal"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '12px',
+                background: 'rgba(255, 255, 255, 0.8)',
+                backdropFilter: 'blur(10px)',
+              }
+            }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Lock color="action" />
+                  <Lock sx={{ color: '#64748b' }} />
                 </InputAdornment>
               ),
               endAdornment: (
@@ -246,6 +284,7 @@ const Register = () => {
                     aria-label="toggle confirm password visibility"
                     onClick={handleClickShowConfirmPassword}
                     edge="end"
+                    sx={{ color: '#64748b' }}
                   >
                     {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
                   </IconButton>
@@ -264,9 +303,16 @@ const Register = () => {
               mt: 3,
               mb: 2,
               py: 1.5,
-              borderRadius: 2,
+              borderRadius: '12px',
               textTransform: 'none',
               fontSize: '1rem',
+              fontWeight: 600,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #5b6bd9 0%, #6a4599 100%)',
+                transform: 'translateY(-1px)',
+              },
+              transition: 'all 0.3s ease',
             }}
           >
             {loading ? 'Creating Account...' : 'Create Account'}
@@ -274,7 +320,7 @@ const Register = () => {
         </Box>
 
         <Box sx={{ textAlign: 'center' }}>
-          <Typography variant="body2" color="textSecondary">
+          <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>
             Already have an account?{' '}
             <Link
               component={RouterLink}
@@ -282,6 +328,7 @@ const Register = () => {
               sx={{
                 textDecoration: 'none',
                 fontWeight: 600,
+                color: '#6366f1',
                 '&:hover': {
                   textDecoration: 'underline',
                 },

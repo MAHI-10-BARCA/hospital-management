@@ -25,8 +25,27 @@ public class PatientService {
         return patientRepository.save(patient);
     }
 
+    // ✅ FIXED: Keep original method for backward compatibility
     public List<Patient> getAllPatients() {
         return patientRepository.findAll();
+    }
+
+    // ✅ FIXED: Add role-based filtering for patients with username
+    public List<Patient> getAllPatients(String username) {
+        User currentUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        // Role-based data filtering
+        if (currentUser.getRoles().contains("ROLE_ADMIN")) {
+            // Admin sees all patients
+            return patientRepository.findAll();
+        } else if (currentUser.getRoles().contains("ROLE_DOCTOR")) {
+            // Doctor sees only their patients (from appointments)
+            return patientRepository.findPatientsByDoctorUserId(currentUser.getId());
+        } else {
+            // Patients and others see empty list
+            return List.of();
+        }
     }
 
     public Optional<Patient> getPatientById(Long id) {
@@ -71,5 +90,13 @@ public class PatientService {
             patient.setGender(updatedPatient.getGender());
             return patientRepository.save(patient);
         }).orElseThrow(() -> new RuntimeException("Patient not found"));
+    }
+
+    // ✅ ADD THIS: Get current patient profile
+    public Patient getCurrentPatient(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return patientRepository.findByUser(user)
+                .orElseThrow(() -> new RuntimeException("Patient profile not found"));
     }
 }

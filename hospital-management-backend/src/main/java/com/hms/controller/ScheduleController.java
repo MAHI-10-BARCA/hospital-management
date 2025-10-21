@@ -37,7 +37,7 @@ public class ScheduleController {
         return ResponseEntity.ok(convertToDTO(savedSchedule));
     }
 
-    // Doctor creates their own schedule - ✅ FIXED: Remove doctor ID from DTO
+    // Doctor creates their own schedule - ✅ FIXED: Auto-creates doctor profile
     @PostMapping("/doctor/{userId}")
     public ResponseEntity<ScheduleResponseDTO> createScheduleByDoctor(
             @PathVariable Long userId, 
@@ -89,6 +89,21 @@ public class ScheduleController {
         return ResponseEntity.ok(responseDTOs);
     }
 
+    // ✅ ADD THIS: Get schedules for current doctor (security fix)
+    @GetMapping("/my-schedules")
+    public ResponseEntity<List<ScheduleResponseDTO>> getMySchedules(Authentication authentication) {
+        String username = authentication.getName();
+        System.out.println("🔐 Getting schedules for current doctor: " + username);
+        
+        List<DoctorSchedule> schedules = scheduleService.getSchedulesForCurrentDoctor(username);
+        List<ScheduleResponseDTO> responseDTOs = schedules.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+        
+        System.out.println("✅ Returning " + responseDTOs.size() + " schedules for doctor: " + username);
+        return ResponseEntity.ok(responseDTOs);
+    }
+
     // Update schedule with proper authentication and DTO conversion
     @PutMapping("/{id}")
     public ResponseEntity<ScheduleResponseDTO> updateSchedule(
@@ -113,8 +128,20 @@ public class ScheduleController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteSchedule(@PathVariable Long id) {
-        scheduleService.deleteSchedule(id);
+    public ResponseEntity<Void> deleteSchedule(
+            @PathVariable Long id,
+            Authentication authentication) {
+        
+        String currentUsername = authentication.getName();
+        String userRole = authentication.getAuthorities().stream()
+                .map(grantedAuthority -> grantedAuthority.getAuthority())
+                .findFirst()
+                .orElse("DOCTOR")
+                .replace("ROLE_", "");
+        
+        System.out.println("🗑️ Deleting schedule ID: " + id + " by user: " + currentUsername + ", role: " + userRole);
+        
+        scheduleService.deleteSchedule(id, currentUsername, userRole);
         return ResponseEntity.noContent().build();
     }
 
@@ -126,9 +153,6 @@ public class ScheduleController {
         schedule.setEndTime(dto.getEndTime());
         schedule.setSlotDuration(dto.getSlotDuration());
         schedule.setMaxPatients(dto.getMaxPatients());
-        
-        // ❌ REMOVED: Don't set doctor from DTO for doctor-created schedules
-        // This was causing the issue - the DTO was providing the wrong doctor ID
         
         return schedule;
     }

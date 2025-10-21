@@ -8,6 +8,7 @@ import {
   Typography,
   Alert,
   MenuItem,
+  alpha,
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
@@ -99,15 +100,43 @@ const EditPatient = () => {
   if (loading) return <LoadingSpinner />;
 
   return (
-    <Box>
-      <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
+    <Box sx={{ p: 3 }}>
+      <Typography 
+        variant="h4" 
+        component="h1" 
+        gutterBottom 
+        fontWeight="bold"
+        sx={{
+          background: 'linear-gradient(135deg, #1e293b 0%, #475569 100%)',
+          backgroundClip: 'text',
+          WebkitBackgroundClip: 'text',
+          color: 'transparent',
+        }}
+      >
         Edit Patient
       </Typography>
 
-      <Card sx={{ maxWidth: 600, borderRadius: 3 }}>
+      <Card 
+        sx={{ 
+          maxWidth: 600, 
+          borderRadius: '24px',
+          background: 'rgba(255, 255, 255, 0.7)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.3)',
+          boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
+        }}
+      >
         <CardContent sx={{ p: 4 }}>
           {error && (
-            <Alert severity="error" sx={{ mb: 3 }}>
+            <Alert 
+              severity="error" 
+              sx={{ 
+                mb: 3,
+                borderRadius: '12px',
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.2)',
+              }}
+            >
               {error}
             </Alert>
           )}
@@ -122,6 +151,13 @@ const EditPatient = () => {
               required
               margin="normal"
               placeholder="Enter patient's full name"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '12px',
+                  background: 'rgba(255, 255, 255, 0.8)',
+                  backdropFilter: 'blur(10px)',
+                }
+              }}
             />
 
             <TextField
@@ -135,6 +171,13 @@ const EditPatient = () => {
               margin="normal"
               inputProps={{ min: 0, max: 150 }}
               placeholder="Enter patient's age"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '12px',
+                  background: 'rgba(255, 255, 255, 0.8)',
+                  backdropFilter: 'blur(10px)',
+                }
+              }}
             />
 
             <TextField
@@ -147,6 +190,13 @@ const EditPatient = () => {
               required
               margin="normal"
               placeholder="Select gender"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '12px',
+                  background: 'rgba(255, 255, 255, 0.8)',
+                  backdropFilter: 'blur(10px)',
+                }
+              }}
             >
               {GENDER_OPTIONS.map((option) => (
                 <MenuItem key={option.value} value={option.value}>
@@ -160,14 +210,35 @@ const EditPatient = () => {
                 type="submit"
                 variant="contained"
                 disabled={submitting}
-                sx={{ borderRadius: 2, px: 4 }}
+                sx={{ 
+                  borderRadius: '12px', 
+                  px: 4,
+                  background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #7c51e0 0%, #6d28d9 100%)',
+                    transform: 'translateY(-1px)',
+                  },
+                  transition: 'all 0.3s ease',
+                }}
               >
                 {submitting ? 'Updating...' : 'Update Patient'}
               </Button>
               <Button
                 variant="outlined"
                 onClick={handleCancel}
-                sx={{ borderRadius: 2, px: 4 }}
+                sx={{ 
+                  borderRadius: '12px', 
+                  px: 4,
+                  border: '2px solid rgba(99, 102, 241, 0.2)',
+                  color: '#6366f1',
+                  background: 'rgba(255, 255, 255, 0.5)',
+                  backdropFilter: 'blur(10px)',
+                  '&:hover': {
+                    border: '2px solid rgba(99, 102, 241, 0.4)',
+                    background: 'rgba(99, 102, 241, 0.08)',
+                  },
+                  transition: 'all 0.3s ease',
+                }}
               >
                 Cancel
               </Button>

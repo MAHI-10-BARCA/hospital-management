@@ -10,6 +10,7 @@ import {
   MenuItem,
   Grid,
   Divider,
+  alpha,
 } from '@mui/material';
 import {
   Person as PersonIcon,
@@ -152,22 +153,60 @@ const AddPatient = () => {
   };
 
   return (
-    <Box>
-      <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
+    <Box sx={{ p: 3 }}>
+      <Typography 
+        variant="h4" 
+        component="h1" 
+        gutterBottom 
+        fontWeight="bold"
+        sx={{
+          background: 'linear-gradient(135deg, #1e293b 0%, #475569 100%)',
+          backgroundClip: 'text',
+          WebkitBackgroundClip: 'text',
+          color: 'transparent',
+        }}
+      >
         Add New Patient
       </Typography>
 
-      <Card sx={{ borderRadius: 3 }}>
+      <Card 
+        sx={{ 
+          borderRadius: '24px',
+          background: 'rgba(255, 255, 255, 0.7)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.3)',
+          boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
+        }}
+      >
         <CardContent sx={{ p: 4 }}>
           {error && (
-            <Alert severity="error" sx={{ mb: 3 }}>
+            <Alert 
+              severity="error" 
+              sx={{ 
+                mb: 3,
+                borderRadius: '12px',
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.2)',
+              }}
+            >
               {error}
             </Alert>
           )}
 
           <Box component="form" onSubmit={handleSubmit}>
             {/* Personal Information */}
-            <Typography variant="h5" gutterBottom color="primary" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+            <Typography 
+              variant="h5" 
+              gutterBottom 
+              sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 1, 
+                mb: 3,
+                color: '#8b5cf6',
+                fontWeight: 600,
+              }}
+            >
               <PersonIcon /> Personal Information
             </Typography>
 
@@ -181,6 +220,13 @@ const AddPatient = () => {
                   onChange={handleChange}
                   required
                   placeholder="Enter patient's full name"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      background: 'rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(10px)',
+                    }
+                  }}
                 />
               </Grid>
 
@@ -193,6 +239,13 @@ const AddPatient = () => {
                   value={formData.gender}
                   onChange={handleChange}
                   required
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      background: 'rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(10px)',
+                    }
+                  }}
                 >
                   {GENDER_OPTIONS.map((option) => (
                     <MenuItem key={option.value} value={option.value}>
@@ -212,6 +265,13 @@ const AddPatient = () => {
                   onChange={handleDateOfBirthChange}
                   InputLabelProps={{ shrink: true }}
                   helperText="Age will be calculated automatically"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      background: 'rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(10px)',
+                    }
+                  }}
                 />
               </Grid>
 
@@ -226,6 +286,13 @@ const AddPatient = () => {
                   required
                   inputProps={{ min: 0, max: 150 }}
                   helperText="Calculated from date of birth"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      background: 'rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(10px)',
+                    }
+                  }}
                 />
               </Grid>
 
@@ -237,6 +304,13 @@ const AddPatient = () => {
                   name="bloodGroup"
                   value={formData.bloodGroup}
                   onChange={handleChange}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      background: 'rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(10px)',
+                    }
+                  }}
                 >
                   {BLOOD_GROUPS.map((group) => (
                     <MenuItem key={group} value={group}>
@@ -247,10 +321,21 @@ const AddPatient = () => {
               </Grid>
             </Grid>
 
-            <Divider sx={{ my: 4 }} />
+            <Divider sx={{ my: 4, borderColor: 'rgba(255, 255, 255, 0.3)' }} />
 
             {/* Contact Information */}
-            <Typography variant="h5" gutterBottom color="primary" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+            <Typography 
+              variant="h5" 
+              gutterBottom 
+              sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 1, 
+                mb: 3,
+                color: '#6366f1',
+                fontWeight: 600,
+              }}
+            >
               <PhoneIcon /> Contact Information
             </Typography>
 
@@ -264,6 +349,13 @@ const AddPatient = () => {
                   onChange={handleChange}
                   placeholder="10-digit phone number"
                   helperText="Format: 1234567890"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      background: 'rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(10px)',
+                    }
+                  }}
                 />
               </Grid>
 
@@ -276,6 +368,13 @@ const AddPatient = () => {
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="patient@email.com"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      background: 'rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(10px)',
+                    }
+                  }}
                 />
               </Grid>
 
@@ -289,6 +388,13 @@ const AddPatient = () => {
                   multiline
                   rows={2}
                   placeholder="Full residential address"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      background: 'rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(10px)',
+                    }
+                  }}
                 />
               </Grid>
 
@@ -300,6 +406,13 @@ const AddPatient = () => {
                   value={formData.emergencyContact}
                   onChange={handleChange}
                   placeholder="Emergency contact person"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      background: 'rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(10px)',
+                    }
+                  }}
                 />
               </Grid>
 
@@ -311,14 +424,32 @@ const AddPatient = () => {
                   value={formData.emergencyPhone}
                   onChange={handleChange}
                   placeholder="Emergency contact number"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      background: 'rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(10px)',
+                    }
+                  }}
                 />
               </Grid>
             </Grid>
 
-            <Divider sx={{ my: 4 }} />
+            <Divider sx={{ my: 4, borderColor: 'rgba(255, 255, 255, 0.3)' }} />
 
             {/* Medical Information */}
-            <Typography variant="h5" gutterBottom color="primary" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+            <Typography 
+              variant="h5" 
+              gutterBottom 
+              sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 1, 
+                mb: 3,
+                color: '#10b981',
+                fontWeight: 600,
+              }}
+            >
               <HealthIcon /> Medical Information
             </Typography>
 
@@ -334,6 +465,13 @@ const AddPatient = () => {
                   rows={3}
                   placeholder="Previous medical conditions, surgeries, chronic illnesses..."
                   helperText="List any significant medical history"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      background: 'rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(10px)',
+                    }
+                  }}
                 />
               </Grid>
 
@@ -348,6 +486,13 @@ const AddPatient = () => {
                   rows={2}
                   placeholder="Drug allergies, food allergies, environmental allergies..."
                   helperText="Known allergies and reactions"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      background: 'rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(10px)',
+                    }
+                  }}
                 />
               </Grid>
 
@@ -362,6 +507,13 @@ const AddPatient = () => {
                   rows={2}
                   placeholder="Prescription drugs, over-the-counter medications..."
                   helperText="Current medications and dosages"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      background: 'rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(10px)',
+                    }
+                  }}
                 />
               </Grid>
 
@@ -373,6 +525,13 @@ const AddPatient = () => {
                   value={formData.insuranceProvider}
                   onChange={handleChange}
                   placeholder="Insurance company name"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      background: 'rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(10px)',
+                    }
+                  }}
                 />
               </Grid>
 
@@ -384,6 +543,13 @@ const AddPatient = () => {
                   value={formData.insuranceId}
                   onChange={handleChange}
                   placeholder="Insurance policy number"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      background: 'rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(10px)',
+                    }
+                  }}
                 />
               </Grid>
             </Grid>
@@ -393,7 +559,16 @@ const AddPatient = () => {
                 type="submit"
                 variant="contained"
                 disabled={loading}
-                sx={{ borderRadius: 2, px: 4 }}
+                sx={{ 
+                  borderRadius: '12px', 
+                  px: 4,
+                  background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #7c51e0 0%, #6d28d9 100%)',
+                    transform: 'translateY(-1px)',
+                  },
+                  transition: 'all 0.3s ease',
+                }}
                 size="large"
               >
                 {loading ? 'Adding Patient...' : 'Add Patient'}
@@ -401,7 +576,19 @@ const AddPatient = () => {
               <Button
                 variant="outlined"
                 onClick={handleCancel}
-                sx={{ borderRadius: 2, px: 4 }}
+                sx={{ 
+                  borderRadius: '12px', 
+                  px: 4,
+                  border: '2px solid rgba(99, 102, 241, 0.2)',
+                  color: '#6366f1',
+                  background: 'rgba(255, 255, 255, 0.5)',
+                  backdropFilter: 'blur(10px)',
+                  '&:hover': {
+                    border: '2px solid rgba(99, 102, 241, 0.4)',
+                    background: 'rgba(99, 102, 241, 0.08)',
+                  },
+                  transition: 'all 0.3s ease',
+                }}
                 size="large"
               >
                 Cancel

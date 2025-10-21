@@ -17,6 +17,7 @@ import {
   StepLabel,
   Paper,
   Chip,
+  alpha,
 } from '@mui/material';
 import {
   Schedule as ScheduleIcon,
@@ -59,9 +60,8 @@ const BookAppointment = () => {
 
   const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
-  const { user, hasRole } = useAuth(); // ✅ FIXED: Get hasRole from useAuth
+  const { user, hasRole } = useAuth();
 
-  // Check if user can book appointments
   useEffect(() => {
     if (user && !canBookAppointments(user)) {
       navigate('/appointments', { 
@@ -85,17 +85,15 @@ const BookAppointment = () => {
     }
   }, [formData.doctorId]);
 
-  // Load initial data including patient profile check
   const loadInitialData = async () => {
     try {
       setLoading(true);
       setCheckingProfile(true);
       
-      // Load doctors
       const doctorsData = await doctorService.getAll();
+      console.log('👨‍⚕️ Doctors loaded:', doctorsData);
       setDoctors(doctorsData);
 
-      // ✅ FIXED: Use hasRole function instead of user.hasRole
       if (user && hasRole('PATIENT')) {
         try {
           await patientService.getMyPatientProfile();
@@ -105,16 +103,13 @@ const BookAppointment = () => {
           setHasPatientProfile(false);
         }
       } else {
-        // For non-patient users (like ADMIN), skip profile check
         setHasPatientProfile(true);
       }
 
-      // Load patients for ADMIN users
       if (hasPermission(user, 'manage_patients')) {
         const patientsData = await patientService.getAll();
         setPatients(patientsData);
       } else {
-        // For patients, they can only book for themselves
         setPatients([{ id: 'self', name: user?.username || 'Current User', age: 'N/A', gender: 'N/A' }]);
         setFormData(prev => ({ ...prev, patientId: 'self' }));
       }
@@ -128,21 +123,29 @@ const BookAppointment = () => {
     }
   };
 
-  // Load available time slots for selected doctor
-  const loadAvailableSlots = async () => {
-    try {
-      console.log('🔄 Loading available slots for doctor:', formData.doctorId);
-      const slots = await scheduleService.getAvailableByDoctor(formData.doctorId);
-      console.log('✅ Available slots loaded:', slots);
-      setAvailableSlots(slots);
-    } catch (err) {
-      console.error('❌ Error loading available slots:', err);
-      enqueueSnackbar('Failed to load available slots', { variant: 'error' });
-      setAvailableSlots([]);
+const loadAvailableSlots = async () => {
+  try {
+    console.log('🔄 Loading available slots for doctor ID:', formData.doctorId);
+    
+    // Get the selected doctor to find their user ID
+    const selectedDoctor = doctors.find(d => d.id === parseInt(formData.doctorId));
+    if (!selectedDoctor) {
+      throw new Error('Selected doctor not found');
     }
-  };
+    
+    console.log('👨‍⚕️ Selected doctor:', selectedDoctor.name, 'User ID:', selectedDoctor.userId);
+    
+    // Use the doctor's user ID to fetch schedules
+    const slots = await scheduleService.getAvailableByDoctor(selectedDoctor.userId);
+    console.log('✅ Available slots loaded:', slots);
+    setAvailableSlots(slots);
+  } catch (err) {
+    console.error('❌ Error loading available slots:', err);
+    enqueueSnackbar('Failed to load available slots', { variant: 'error' });
+    setAvailableSlots([]);
+  }
+};
 
-  // Handle form field changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({
@@ -152,9 +155,7 @@ const BookAppointment = () => {
     setError('');
   };
 
-  // Handle next step in stepper
   const handleNext = () => {
-    // Validate current step
     if (activeStep === 0 && !formData.doctorId) {
       setError('Please select a doctor');
       return;
@@ -168,88 +169,80 @@ const BookAppointment = () => {
     setError('');
   };
 
-  // Handle back step in stepper
   const handleBack = () => {
     setActiveStep((prevStep) => prevStep - 1);
     setError('');
   };
 
-  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setError('');
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setSubmitting(true);
-  setError('');
-
-  if (!formData.reason.trim()) {
-    setError('Please provide a reason for the appointment');
-    setSubmitting(false);
-    return;
-  }
-
-  try {
-    console.log('📅 Creating appointment with data:', formData);
-    
-    let patientId;
-    
-    if (hasPermission(user, 'manage_patients')) {
-      patientId = formData.patientId === 'self' ? null : parseInt(formData.patientId);
-    } else {
-      try {
-        const patientProfile = await patientService.getMyPatientProfile();
-        patientId = patientProfile.id;
-        console.log('✅ Using patient profile ID:', patientId);
-      } catch (error) {
-        console.error('❌ Error getting patient profile:', error);
-        setError('Please complete your patient profile first');
-        setSubmitting(false);
-        return;
-      }
-    }
-
-    if (!patientId) {
-      setError('Patient information is required');
+    if (!formData.reason.trim()) {
+      setError('Please provide a reason for the appointment');
       setSubmitting(false);
       return;
     }
 
-    // ✅ FIXED: Include reason in appointment data
-    const appointmentData = {
-      patient: { id: patientId },
-      doctor: { id: parseInt(formData.doctorId) },
-      schedule: { id: parseInt(formData.scheduleId) },
-      status: 'SCHEDULED',
-      reason: formData.reason // ✅ ADDED
-    };
+    try {
+      console.log('📅 Creating appointment with data:', formData);
+      
+      let patientId;
+      
+      if (hasPermission(user, 'manage_patients')) {
+        patientId = formData.patientId === 'self' ? null : parseInt(formData.patientId);
+      } else {
+        try {
+          const patientProfile = await patientService.getMyPatientProfile();
+          patientId = patientProfile.id;
+          console.log('✅ Using patient profile ID:', patientId);
+        } catch (error) {
+          console.error('❌ Error getting patient profile:', error);
+          setError('Please complete your patient profile first');
+          setSubmitting(false);
+          return;
+        }
+      }
 
-    console.log('📤 Sending appointment request:', appointmentData);
-    
-    await appointmentService.create(appointmentData);
-    enqueueSnackbar('Appointment booked successfully!', { variant: 'success' });
-    navigate('/appointments');
-  } catch (err) {
-    console.error('❌ Error booking appointment:', err);
-    const errorMessage = err.response?.data?.message || err.message || 'Failed to book appointment';
-    setError(errorMessage);
-    enqueueSnackbar('Failed to book appointment: ' + errorMessage, { variant: 'error' });
-  } finally {
-    setSubmitting(false);
-  }
-};
+      if (!patientId) {
+        setError('Patient information is required');
+        setSubmitting(false);
+        return;
+      }
 
-  // Handle cancel action
+      const appointmentData = {
+        patient: { id: patientId },
+        doctor: { id: parseInt(formData.doctorId) },
+        schedule: { id: parseInt(formData.scheduleId) },
+        status: 'SCHEDULED',
+        reason: formData.reason
+      };
+
+      console.log('📤 Sending appointment request:', appointmentData);
+      
+      await appointmentService.create(appointmentData);
+      enqueueSnackbar('Appointment booked successfully!', { variant: 'success' });
+      navigate('/appointments');
+    } catch (err) {
+      console.error('❌ Error booking appointment:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to book appointment';
+      setError(errorMessage);
+      enqueueSnackbar('Failed to book appointment: ' + errorMessage, { variant: 'error' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleCancel = () => {
     navigate('/appointments');
   };
 
-  // Handle patient profile creation
   const handleProfileCreated = (profile) => {
     setHasPatientProfile(true);
-    // Reload data after profile creation
     loadInitialData();
   };
 
-  // Helper functions to get selected data
   const getSelectedPatient = () => {
     if (formData.patientId === 'self') {
       return { name: user?.username || 'Current User', age: 'N/A', gender: 'N/A' };
@@ -260,11 +253,21 @@ const handleSubmit = async (e) => {
   const getSelectedDoctor = () => doctors.find(d => d.id === parseInt(formData.doctorId));
   const getSelectedSlot = () => availableSlots.find(s => s.id === parseInt(formData.scheduleId));
 
-  // ✅ FIXED: Use hasRole function instead of user.hasRole
   if (user && hasRole('PATIENT') && !hasPatientProfile && !checkingProfile) {
     return (
-      <Box>
-        <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
+      <Box sx={{ p: 3 }}>
+        <Typography 
+          variant="h4" 
+          component="h1" 
+          gutterBottom 
+          fontWeight="bold"
+          sx={{
+            background: 'linear-gradient(135deg, #1e293b 0%, #475569 100%)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            color: 'transparent',
+          }}
+        >
           Book New Appointment
         </Typography>
         <PatientProfileSetup onProfileCreated={handleProfileCreated} />
@@ -272,16 +275,25 @@ const handleSubmit = async (e) => {
     );
   }
 
-  // Render step content based on current step
   const renderStepContent = (step) => {
     switch (step) {
       case 0:
         return (
           <Box>
-            {/* Patient Selection - Only show for ADMIN users */}
             {hasPermission(user, 'manage_patients') && (
               <>
-                <Typography variant="h6" gutterBottom color="primary" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                <Typography 
+                  variant="h6" 
+                  gutterBottom 
+                  sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 1, 
+                    mb: 2,
+                    color: '#6366f1',
+                    fontWeight: 600,
+                  }}
+                >
                   <PersonIcon /> Select Patient
                 </Typography>
                 <FormControl fullWidth sx={{ mb: 3 }}>
@@ -292,6 +304,13 @@ const handleSubmit = async (e) => {
                     onChange={handleChange}
                     label="Select Patient *"
                     required
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: '12px',
+                        background: 'rgba(255, 255, 255, 0.8)',
+                        backdropFilter: 'blur(10px)',
+                      }
+                    }}
                   >
                     {patients.map((patient) => (
                       <MenuItem key={patient.id} value={patient.id}>
@@ -299,7 +318,7 @@ const handleSubmit = async (e) => {
                           <Typography variant="body1" fontWeight="bold">
                             {patient.name}
                           </Typography>
-                          <Typography variant="caption" color="textSecondary">
+                          <Typography variant="caption" sx={{ color: '#64748b' }}>
                             Age: {patient.age} • Gender: {patient.gender}
                           </Typography>
                         </Box>
@@ -310,41 +329,70 @@ const handleSubmit = async (e) => {
               </>
             )}
 
-            {/* Doctor Selection */}
-            <Typography variant="h6" gutterBottom color="primary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-  <DoctorIcon /> Choose Doctor
-</Typography>
-<FormControl fullWidth>
-  <InputLabel>Select Doctor *</InputLabel>
-  <Select
-    name="doctorId"
-    value={formData.doctorId}
-    onChange={handleChange}
-    label="Select Doctor *"
-    required
-  >
-    {doctors.map((doctor) => (
-      <MenuItem key={doctor.id} value={doctor.userId || doctor.id}> {/* ✅ FIXED: Use userId */}
-        <Box>
-          <Typography variant="body1" fontWeight="bold">
-            Dr. {doctor.name || 'Unnamed Doctor'}
-          </Typography>
-          <Typography variant="caption" color="textSecondary">
-            {doctor.specialization || 'General'} • Contact: {doctor.contact || 'Not provided'}
-            {doctor.userId && ` • User ID: ${doctor.userId}`} {/* Debug info */}
-          </Typography>
-        </Box>
-      </MenuItem>
-    ))}
-  </Select>
-</FormControl>            
+            <Typography 
+              variant="h6" 
+              gutterBottom 
+              sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 1,
+                color: '#10b981',
+                fontWeight: 600,
+              }}
+            >
+              <DoctorIcon /> Choose Doctor
+            </Typography>
+            <FormControl fullWidth>
+              <InputLabel>Select Doctor *</InputLabel>
+              <Select
+                name="doctorId"
+                value={formData.doctorId}
+                onChange={handleChange}
+                label="Select Doctor *"
+                required
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '12px',
+                    background: 'rgba(255, 255, 255, 0.8)',
+                    backdropFilter: 'blur(10px)',
+                  }
+                }}
+              >
+                {doctors.map((doctor) => (
+                  <MenuItem key={doctor.id} value={doctor.id}> {/* ✅ FIXED: Use doctor.id instead of doctor.userId */}
+                    <Box>
+                      <Typography variant="body1" fontWeight="bold">
+                        Dr. {doctor.name || 'Unnamed Doctor'}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#64748b' }}>
+                        {doctor.specialization || 'General'} • Contact: {doctor.contact || 'Not provided'}
+                      </Typography>
+                      <Typography variant="caption" display="block" sx={{ color: '#10b981', fontSize: '0.7rem' }}>
+                        Doctor ID: {doctor.id} • User ID: {doctor.userId}
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>            
             {getSelectedDoctor() && (
-              <Paper sx={{ p: 2, mt: 2, backgroundColor: 'primary.50' }}>
+              <Paper 
+                sx={{ 
+                  p: 2, 
+                  mt: 2, 
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  border: '1px solid rgba(16, 185, 129, 0.2)',
+                  borderRadius: '12px',
+                }}
+              >
                 <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
                   Selected Doctor:
                 </Typography>
                 <Typography variant="body2">
                   Dr. {getSelectedDoctor().name || 'Unnamed Doctor'} - {getSelectedDoctor().specialization || 'General'}
+                </Typography>
+                <Typography variant="caption" display="block" sx={{ color: '#64748b' }}>
+                  Doctor ID: {getSelectedDoctor().id}
                 </Typography>
               </Paper>
             )}
@@ -354,12 +402,30 @@ const handleSubmit = async (e) => {
       case 1:
         return (
           <Box>
-            <Typography variant="h6" gutterBottom color="primary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography 
+              variant="h6" 
+              gutterBottom 
+              sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 1,
+                color: '#f59e0b',
+                fontWeight: 600,
+              }}
+            >
               <ScheduleIcon /> Pick Time Slot
             </Typography>
             
             {availableSlots.length === 0 ? (
-              <Alert severity="info" sx={{ mb: 3 }}>
+              <Alert 
+                severity="info" 
+                sx={{ 
+                  mb: 3,
+                  borderRadius: '12px',
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  border: '1px solid rgba(59, 130, 246, 0.2)',
+                }}
+              >
                 <Typography variant="body1" fontWeight="bold">
                   No Available Time Slots
                 </Typography>
@@ -379,6 +445,13 @@ const handleSubmit = async (e) => {
                   onChange={handleChange}
                   label="Available Time Slots *"
                   required
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      background: 'rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(10px)',
+                    }
+                  }}
                 >
                   {availableSlots.map((slot) => (
                     <MenuItem key={slot.id} value={slot.id}>
@@ -386,10 +459,10 @@ const handleSubmit = async (e) => {
                         <Typography variant="body1" fontWeight="bold">
                           {formatDate(slot.availableDate)}
                         </Typography>
-                        <Typography variant="caption" color="textSecondary">
+                        <Typography variant="caption" sx={{ color: '#64748b' }}>
                           {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
                         </Typography>
-                        <Typography variant="caption" display="block" color="success.main">
+                        <Typography variant="caption" display="block" sx={{ color: '#10b981' }}>
                           {slot.slotDuration}min slots • Max {slot.maxPatients} patient(s)
                         </Typography>
                       </Box>
@@ -400,7 +473,15 @@ const handleSubmit = async (e) => {
             )}
             
             {getSelectedSlot() && (
-              <Paper sx={{ p: 2, mt: 2, backgroundColor: 'success.50' }}>
+              <Paper 
+                sx={{ 
+                  p: 2, 
+                  mt: 2, 
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  border: '1px solid rgba(16, 185, 129, 0.2)',
+                  borderRadius: '12px',
+                }}
+              >
                 <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
                   Selected Time Slot:
                 </Typography>
@@ -418,52 +499,74 @@ const handleSubmit = async (e) => {
       case 2:
         return (
           <Box>
-            <Typography variant="h6" gutterBottom color="primary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography 
+              variant="h6" 
+              gutterBottom 
+              sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 1,
+                color: '#8b5cf6',
+                fontWeight: 600,
+              }}
+            >
               <ConfirmIcon /> Confirm Appointment Details
             </Typography>
             
-            <Paper sx={{ p: 3, mb: 3, backgroundColor: 'grey.50' }}>
+            <Paper 
+              sx={{ 
+                p: 3, 
+                mb: 3, 
+                background: 'rgba(255, 255, 255, 0.7)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                borderRadius: '16px',
+              }}
+            >
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="textSecondary">Patient</Typography>
+                  <Typography variant="subtitle2" sx={{ color: '#64748b' }}>Patient</Typography>
                   <Typography variant="body1" fontWeight="bold">
                     {getSelectedPatient()?.name || user?.username || 'Current User'}
                   </Typography>
                   {hasPermission(user, 'manage_patients') && getSelectedPatient()?.age !== 'N/A' && (
-                    <Typography variant="caption">
+                    <Typography variant="caption" sx={{ color: '#94a3b8' }}>
                       Age: {getSelectedPatient()?.age} • Gender: {getSelectedPatient()?.gender}
                     </Typography>
                   )}
                 </Grid>
                 
                 <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="textSecondary">Doctor</Typography>
+                  <Typography variant="subtitle2" sx={{ color: '#64748b' }}>Doctor</Typography>
                   <Typography variant="body1" fontWeight="bold">
                     Dr. {getSelectedDoctor()?.name || 'Unnamed Doctor'}
                   </Typography>
-                  <Typography variant="caption">
+                  <Typography variant="caption" sx={{ color: '#94a3b8' }}>
                     {getSelectedDoctor()?.specialization || 'General'}
+                  </Typography>
+                  <Typography variant="caption" display="block" sx={{ color: '#94a3b8' }}>
+                    Doctor ID: {getSelectedDoctor()?.id}
                   </Typography>
                 </Grid>
                 
                 {getSelectedSlot() && (
                   <>
                     <Grid item xs={12} sm={6}>
-                      <Typography variant="subtitle2" color="textSecondary">Date & Time</Typography>
+                      <Typography variant="subtitle2" sx={{ color: '#64748b' }}>Date & Time</Typography>
                       <Typography variant="body1" fontWeight="bold">
                         {formatDate(getSelectedSlot()?.availableDate)}
                       </Typography>
-                      <Typography variant="caption">
+                      <Typography variant="caption" sx={{ color: '#94a3b8' }}>
                         {formatTime(getSelectedSlot()?.startTime)} - {formatTime(getSelectedSlot()?.endTime)}
                       </Typography>
                     </Grid>
                     
                     <Grid item xs={12} sm={6}>
-                      <Typography variant="subtitle2" color="textSecondary">Slot Details</Typography>
+                      <Typography variant="subtitle2" sx={{ color: '#64748b' }}>Slot Details</Typography>
                       <Typography variant="body2">
                         {getSelectedSlot()?.slotDuration} minute slots
                       </Typography>
-                      <Typography variant="caption">
+                      <Typography variant="caption" sx={{ color: '#94a3b8' }}>
                         Max {getSelectedSlot()?.maxPatients} patient(s) per slot
                       </Typography>
                     </Grid>
@@ -471,17 +574,34 @@ const handleSubmit = async (e) => {
                 )}
                 
                 <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="textSecondary">Urgency</Typography>
+                  <Typography variant="subtitle2" sx={{ color: '#64748b' }}>Urgency</Typography>
                   <Chip 
                     label={formData.urgency} 
                     size="small" 
-                    color={formData.urgency === 'URGENT' ? 'error' : 'primary'}
+                    sx={{
+                      background: formData.urgency === 'URGENT' 
+                        ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+                        : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                      color: 'white',
+                      fontWeight: '600',
+                    }}
                   />
                 </Grid>
               </Grid>
             </Paper>
 
-            <Typography variant="h6" gutterBottom color="primary" sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 3 }}>
+            <Typography 
+              variant="h6" 
+              gutterBottom 
+              sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 1, 
+                mt: 3,
+                color: '#6366f1',
+                fontWeight: 600,
+              }}
+            >
               <ReasonIcon /> Appointment Reason
             </Typography>
             <TextField
@@ -495,6 +615,13 @@ const handleSubmit = async (e) => {
               rows={4}
               placeholder="Please describe your symptoms, concerns, or reason for this appointment in detail..."
               helperText="Be specific about your symptoms to help the doctor prepare"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '12px',
+                  background: 'rgba(255, 255, 255, 0.8)',
+                  backdropFilter: 'blur(10px)',
+                }
+              }}
             />
             
             <FormControl fullWidth sx={{ mt: 2 }}>
@@ -504,6 +631,13 @@ const handleSubmit = async (e) => {
                 value={formData.urgency}
                 onChange={handleChange}
                 label="Urgency Level"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '12px',
+                    background: 'rgba(255, 255, 255, 0.8)',
+                    backdropFilter: 'blur(10px)',
+                  }
+                }}
               >
                 <MenuItem value="ROUTINE">Routine Check-up</MenuItem>
                 <MenuItem value="FOLLOWUP">Follow-up Visit</MenuItem>
@@ -524,14 +658,32 @@ const handleSubmit = async (e) => {
   }
 
   return (
-    <Box>
-      <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
+    <Box sx={{ p: 3 }}>
+      <Typography 
+        variant="h4" 
+        component="h1" 
+        gutterBottom 
+        fontWeight="bold"
+        sx={{
+          background: 'linear-gradient(135deg, #1e293b 0%, #475569 100%)',
+          backgroundClip: 'text',
+          WebkitBackgroundClip: 'text',
+          color: 'transparent',
+        }}
+      >
         Book New Appointment
       </Typography>
 
-      <Card sx={{ borderRadius: 3 }}>
+      <Card 
+        sx={{ 
+          borderRadius: '24px',
+          background: 'rgba(255, 255, 255, 0.7)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.3)',
+          boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
+        }}
+      >
         <CardContent sx={{ p: 4 }}>
-          {/* Stepper */}
           <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
             {steps.map((label) => (
               <Step key={label}>
@@ -541,17 +693,35 @@ const handleSubmit = async (e) => {
           </Stepper>
 
           {error && (
-            <Alert severity="error" sx={{ mb: 3 }}>
+            <Alert 
+              severity="error" 
+              sx={{ 
+                mb: 3,
+                borderRadius: '12px',
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.2)',
+              }}
+            >
               {error}
             </Alert>
           )}
 
-          {/* Debug Info - Remove in production */}
-          <Alert severity="info" sx={{ mb: 3 }}>
+          <Alert 
+            severity="info" 
+            sx={{ 
+              mb: 3,
+              borderRadius: '12px',
+              background: 'rgba(59, 130, 246, 0.1)',
+              border: '1px solid rgba(59, 130, 246, 0.2)',
+            }}
+          >
             <Typography variant="body2">
               <strong>Debug Info:</strong> User: {user?.username} | Role: {user?.roles?.[0]} | 
               Patient Profile: {hasPatientProfile ? 'Yes' : 'No'} | 
               Doctors: {doctors.length} | Available Slots: {availableSlots.length}
+            </Typography>
+            <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+              Available Doctor IDs: {doctors.map(d => d.id).join(', ')}
             </Typography>
           </Alert>
 
@@ -561,7 +731,19 @@ const handleSubmit = async (e) => {
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
               <Button
                 onClick={activeStep === 0 ? handleCancel : handleBack}
-                sx={{ borderRadius: 2, px: 4 }}
+                sx={{ 
+                  borderRadius: '12px', 
+                  px: 4,
+                  border: '2px solid rgba(99, 102, 241, 0.2)',
+                  color: '#6366f1',
+                  background: 'rgba(255, 255, 255, 0.5)',
+                  backdropFilter: 'blur(10px)',
+                  '&:hover': {
+                    border: '2px solid rgba(99, 102, 241, 0.4)',
+                    background: 'rgba(99, 102, 241, 0.08)',
+                  },
+                  transition: 'all 0.3s ease',
+                }}
               >
                 {activeStep === 0 ? 'Cancel' : 'Back'}
               </Button>
@@ -572,7 +754,16 @@ const handleSubmit = async (e) => {
                     variant="contained"
                     onClick={handleNext}
                     disabled={activeStep === 1 && availableSlots.length === 0}
-                    sx={{ borderRadius: 2, px: 4 }}
+                    sx={{ 
+                      borderRadius: '12px', 
+                      px: 4,
+                      background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #5b5cdc 0%, #7c51e0 100%)',
+                        transform: 'translateY(-1px)',
+                      },
+                      transition: 'all 0.3s ease',
+                    }}
                   >
                     Next
                   </Button>
@@ -583,7 +774,16 @@ const handleSubmit = async (e) => {
                     type="submit"
                     variant="contained"
                     disabled={submitting}
-                    sx={{ borderRadius: 2, px: 4 }}
+                    sx={{ 
+                      borderRadius: '12px', 
+                      px: 4,
+                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #0da271 0%, #047852 100%)',
+                        transform: 'translateY(-1px)',
+                      },
+                      transition: 'all 0.3s ease',
+                    }}
                   >
                     {submitting ? 'Booking Appointment...' : 'Confirm & Book Appointment'}
                   </Button>

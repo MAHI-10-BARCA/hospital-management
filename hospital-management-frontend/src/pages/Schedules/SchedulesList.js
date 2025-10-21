@@ -44,31 +44,20 @@ const SchedulesList = () => {
       let data = [];
       
       if (hasPermission(user, 'manage_schedules')) {
-        // Doctor viewing their own schedules
-        console.log('🔄 Loading doctor schedules for user:', user.id);
         try {
-          // Try the new endpoint first
           data = await scheduleService.getDoctorOwnSchedules(user.id);
         } catch (err) {
-          console.warn('❌ Doctor schedules endpoint failed, trying fallback:', err);
-          // Fallback to available schedules
           data = await scheduleService.getAvailableByDoctor(user.id);
         }
       } else if (hasPermission(user, 'manage_patients')) {
-        // Admin viewing all schedules - need to implement this endpoint
-        console.log('👑 Admin viewing schedules');
-        // For now, show message that admin can view but not manage
         data = [];
       } else {
-        // Patient or other users - show available schedules
-        console.log('👤 Patient viewing available schedules');
         data = [];
       }
       
-      console.log('📅 Schedules loaded:', data);
       setSchedules(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('❌ Error loading schedules:', err);
+      console.error('Error loading schedules:', err);
       setError('Failed to load schedules: ' + (err.response?.data?.message || err.message));
     } finally {
       setLoading(false);
@@ -85,7 +74,7 @@ const SchedulesList = () => {
       await scheduleService.delete(scheduleToDelete.id);
       setSchedules(schedules.filter(s => s.id !== scheduleToDelete.id));
     } catch (err) {
-      console.error('❌ Error deleting schedule:', err);
+      console.error('Error deleting schedule:', err);
       setError('Failed to delete schedule: ' + (err.response?.data?.message || err.message));
     } finally {
       setDeleteDialogOpen(false);
@@ -94,16 +83,24 @@ const SchedulesList = () => {
   };
 
   const handleEditClick = (schedule) => {
-    // Navigate to manage schedule with edit mode
     navigate('/schedules/manage', { state: { editSchedule: schedule } });
   };
 
   if (loading) return <LoadingSpinner />;
 
   return (
-    <Box>
+    <Box sx={{ 
+      background: 'linear-gradient(135deg, #f0f4ff 0%, #f8fafc 100%)',
+      minHeight: '100vh',
+      p: 3
+    }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Typography variant="h4" component="h1" fontWeight="bold">
+        <Typography 
+          variant="h4" 
+          component="h1" 
+          fontWeight="bold"
+          sx={{ color: 'text.primary' }}
+        >
           {hasPermission(user, 'manage_schedules') ? 'My Schedule' : 'Doctor Schedules'}
         </Typography>
         {hasPermission(user, 'manage_schedules') && (
@@ -111,7 +108,19 @@ const SchedulesList = () => {
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => navigate('/schedules/manage')}
-            sx={{ borderRadius: 2 }}
+            sx={{
+              background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
+              borderRadius: '12px',
+              fontWeight: 600,
+              textTransform: 'none',
+              px: 3,
+              '&:hover': {
+                transform: 'translateY(-2px)',
+                boxShadow: '0 8px 25px rgba(99, 102, 241, 0.4)',
+                background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
+              },
+              transition: 'all 0.3s ease'
+            }}
           >
             Add Time Slot
           </Button>
@@ -119,14 +128,13 @@ const SchedulesList = () => {
       </Box>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
+        <Alert severity="error" sx={{ mb: 3, borderRadius: '12px' }}>
           {error}
         </Alert>
       )}
 
-      {/* Info for different user roles */}
       {hasPermission(user, 'manage_patients') && schedules.length === 0 && (
-        <Alert severity="info" sx={{ mb: 3 }}>
+        <Alert severity="info" sx={{ mb: 3, borderRadius: '12px' }}>
           <Typography variant="body2">
             <strong>Admin View:</strong> You can view all appointments in the Appointments section. 
             Doctors manage their own schedules.
@@ -135,7 +143,7 @@ const SchedulesList = () => {
       )}
 
       {!hasPermission(user, 'manage_schedules') && !hasPermission(user, 'manage_patients') && (
-        <Alert severity="info" sx={{ mb: 3 }}>
+        <Alert severity="info" sx={{ mb: 3, borderRadius: '12px' }}>
           <Typography variant="body2">
             <strong>Patient View:</strong> Available time slots are shown when booking appointments.
           </Typography>
@@ -147,11 +155,11 @@ const SchedulesList = () => {
           <Grid item xs={12} md={6} lg={4} key={schedule.id}>
             <Card 
               sx={{ 
-                borderRadius: 3,
+                borderRadius: '20px',
                 transition: 'transform 0.2s, box-shadow 0.2s',
                 '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: 3,
+                  transform: 'translateY(-4px)',
+                  boxShadow: '0 12px 40px rgba(99, 102, 241, 0.15)',
                 },
               }}
             >
@@ -169,20 +177,29 @@ const SchedulesList = () => {
                     </Box>
                   </Box>
                   
-                  {/* Action buttons for doctors */}
                   {hasPermission(user, 'manage_schedules') && (
                     <Box sx={{ display: 'flex', gap: 0.5 }}>
                       <IconButton
                         size="small"
                         onClick={() => handleEditClick(schedule)}
-                        sx={{ color: 'primary.main' }}
+                        sx={{ 
+                          color: 'primary.main',
+                          '&:hover': {
+                            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                          }
+                        }}
                       >
                         <EditIcon fontSize="small" />
                       </IconButton>
                       <IconButton
                         size="small"
                         onClick={() => handleDeleteClick(schedule)}
-                        sx={{ color: 'error.main' }}
+                        sx={{ 
+                          color: 'error.main',
+                          '&:hover': {
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                          }
+                        }}
                       >
                         <DeleteIcon fontSize="small" />
                       </IconButton>
@@ -195,12 +212,14 @@ const SchedulesList = () => {
                     label={schedule.isBooked ? 'Booked' : 'Available'}
                     color={schedule.isBooked ? 'error' : 'success'}
                     size="small"
+                    sx={{ borderRadius: '8px' }}
                   />
                   {schedule.createdBy && (
                     <Chip
                       label={`By: ${schedule.createdBy}`}
                       variant="outlined"
                       size="small"
+                      sx={{ borderRadius: '8px' }}
                     />
                   )}
                   {schedule.slotDuration && (
@@ -209,11 +228,11 @@ const SchedulesList = () => {
                       variant="outlined"
                       size="small"
                       color="primary"
+                      sx={{ borderRadius: '8px' }}
                     />
                   )}
                 </Box>
 
-                {/* Doctor info (for admin view) */}
                 {hasPermission(user, 'manage_patients') && schedule.doctor && (
                   <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
                     Doctor: Dr. {schedule.doctor.name || schedule.doctor.username}
@@ -221,7 +240,6 @@ const SchedulesList = () => {
                   </Typography>
                 )}
 
-                {/* Additional info */}
                 <Box sx={{ mt: 1 }}>
                   {schedule.maxPatients && (
                     <Typography variant="caption" color="textSecondary" display="block">
@@ -236,7 +254,7 @@ const SchedulesList = () => {
       </Grid>
 
       {schedules.length === 0 && (
-        <Card sx={{ textAlign: 'center', p: 6, borderRadius: 3 }}>
+        <Card sx={{ textAlign: 'center', p: 6, borderRadius: '20px' }}>
           <ScheduleIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2, opacity: 0.5 }} />
           <Typography variant="h6" color="textSecondary" gutterBottom>
             No schedules found
@@ -254,6 +272,19 @@ const SchedulesList = () => {
               variant="contained"
               startIcon={<AddIcon />}
               onClick={() => navigate('/schedules/manage')}
+              sx={{
+                background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
+                borderRadius: '12px',
+                fontWeight: 600,
+                textTransform: 'none',
+                px: 3,
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 8px 25px rgba(99, 102, 241, 0.4)',
+                  background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
+                },
+                transition: 'all 0.3s ease'
+              }}
             >
               Add Your First Time Slot
             </Button>
@@ -261,7 +292,6 @@ const SchedulesList = () => {
         </Card>
       )}
 
-      {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}

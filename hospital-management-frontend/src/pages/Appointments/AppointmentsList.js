@@ -19,6 +19,7 @@ import {
   FormControl,
   InputLabel,
   Select,
+  alpha,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -33,6 +34,7 @@ import {
   LocalHospital as DoctorIcon,
   Edit as EditIcon,
   Description as DescriptionIcon,
+  Search as SearchIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
@@ -260,7 +262,11 @@ const AppointmentsList = () => {
         color={getStatusColor(status)}
         size="small"
         variant="filled"
-        sx={{ fontWeight: 'bold', minWidth: 100 }}
+        sx={{ 
+          fontWeight: 'bold', 
+          minWidth: 100,
+          background: `linear-gradient(135deg, ${getStatusColor(status)}.main 0%, ${getStatusColor(status)}.dark 100%)`,
+        }}
       />
     );
   };
@@ -271,26 +277,38 @@ const AppointmentsList = () => {
   if (loading) return <LoadingSpinner />;
 
   return (
-    <Box>
+    <Box sx={{ p: 3 }}>
+      {/* Header with Glass Effect */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Typography variant="h4" component="h1" fontWeight="bold">
+        <Typography 
+          variant="h4" 
+          component="h1" 
+          fontWeight="bold"
+          sx={{
+            background: 'linear-gradient(135deg, #1e293b 0%, #475569 100%)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            color: 'transparent',
+          }}
+        >
           Appointments
         </Typography>
-        {hasPermission(user, 'book_appointments') && (
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => navigate('/appointments/book')}
-            sx={{ borderRadius: 2 }}
-          >
-            Book Appointment
-          </Button>
-        )}
+        {/* REMOVED Book Appointment Button */}
       </Box>
 
-      <Card sx={{ mb: 3, borderRadius: 3 }}>
-        <CardContent>
-          <Grid container spacing={2} alignItems="center">
+      {/* Search and Filter Card with Glass Morphism */}
+      <Card 
+        sx={{ 
+          mb: 4, 
+          borderRadius: '24px',
+          background: 'rgba(255, 255, 255, 0.7)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.3)',
+          boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
+        }}
+      >
+        <CardContent sx={{ p: 4 }}>
+          <Grid container spacing={3} alignItems="center">
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
@@ -298,6 +316,16 @@ const AppointmentsList = () => {
                 placeholder="Search appointments by patient, doctor, or reason..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <SearchIcon sx={{ color: '#64748b', mr: 1 }} />
+                  ),
+                  sx: {
+                    borderRadius: '12px',
+                    background: 'rgba(255, 255, 255, 0.8)',
+                    backdropFilter: 'blur(10px)',
+                  }
+                }}
               />
             </Grid>
             <Grid item xs={12} md={4}>
@@ -307,6 +335,11 @@ const AppointmentsList = () => {
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                   label="Filter by Status"
+                  sx={{
+                    borderRadius: '12px',
+                    background: 'rgba(255, 255, 255, 0.8)',
+                    backdropFilter: 'blur(10px)',
+                  }}
                 >
                   <MenuItem value="all">All Statuses</MenuItem>
                   <MenuItem value={APPOINTMENT_STATUS.SCHEDULED}>Scheduled</MenuItem>
@@ -318,7 +351,14 @@ const AppointmentsList = () => {
               </FormControl>
             </Grid>
             <Grid item xs={12} md={2}>
-              <Typography variant="body2" color="textSecondary" align="center">
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  color: '#64748b', 
+                  textAlign: 'center',
+                  fontWeight: 500,
+                }}
+              >
                 {filteredAppointments.length} appointments
               </Typography>
             </Grid>
@@ -327,7 +367,15 @@ const AppointmentsList = () => {
       </Card>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
+        <Alert 
+          severity="error" 
+          sx={{ 
+            mb: 3, 
+            borderRadius: '12px',
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.2)',
+          }}
+        >
           {error}
         </Alert>
       )}
@@ -337,26 +385,59 @@ const AppointmentsList = () => {
           <Grid item xs={12} key={appointment.id}>
             <Card
               sx={{
-                transition: 'transform 0.2s, box-shadow 0.2s',
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 8px 16px rgba(0,0,0,0.1)',
+                transition: 'all 0.3s ease',
+                background: 'rgba(255, 255, 255, 0.7)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                borderRadius: '20px',
+                boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '4px',
+                  background: `linear-gradient(135deg, ${getStatusColor(appointment.status)}.main 0%, ${getStatusColor(appointment.status)}.dark 100%)`,
                 },
-                borderRadius: 3,
-                borderLeft: `4px solid ${getStatusColor(appointment.status)}`,
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: '0 12px 40px 0 rgba(31, 38, 135, 0.15)',
+                },
               }}
             >
-              <CardContent>
+              <CardContent sx={{ p: 3 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <Box sx={{ flexGrow: 1 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                       <Box>
-                        <Typography variant="h6" component="h2" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <PersonIcon color="primary" />
+                        <Typography 
+                          variant="h6" 
+                          component="h2" 
+                          fontWeight="bold" 
+                          sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: 1,
+                            color: '#1e293b'
+                          }}
+                        >
+                          <PersonIcon sx={{ color: '#6366f1' }} />
                           {appointment.patientName || 'Unknown Patient'}
                         </Typography>
-                        <Typography variant="body2" color="textSecondary" sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                          <DoctorIcon fontSize="small" />
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: 1, 
+                            mt: 0.5,
+                            color: '#64748b'
+                          }}
+                        >
+                          <DoctorIcon fontSize="small" sx={{ color: '#10b981' }} />
                           with Dr. {appointment.doctorName || 'Unknown Doctor'}
                           {appointment.doctorSpecialization && ` • ${appointment.doctorSpecialization}`}
                         </Typography>
@@ -367,6 +448,14 @@ const AppointmentsList = () => {
                           <IconButton
                             size="small"
                             onClick={(e) => handleMenuOpen(e, appointment)}
+                            sx={{
+                              background: 'rgba(99, 102, 241, 0.1)',
+                              border: '1px solid rgba(99, 102, 241, 0.2)',
+                              borderRadius: '8px',
+                              '&:hover': {
+                                background: 'rgba(99, 102, 241, 0.15)',
+                              },
+                            }}
                           >
                             <MoreIcon />
                           </IconButton>
@@ -377,23 +466,23 @@ const AppointmentsList = () => {
                     <Grid container spacing={2}>
                       <Grid item xs={12} md={6}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                          <CalendarIcon color="action" fontSize="small" />
-                          <Typography variant="body2">
-                            <strong>Date:</strong> {formatDate(appointment.appointmentDate)}
+                          <CalendarIcon sx={{ color: '#64748b', fontSize: '18px' }} />
+                          <Typography variant="body2" sx={{ color: '#475569', fontWeight: 500 }}>
+                            <strong style={{ color: '#1e293b' }}>Date:</strong> {formatDate(appointment.appointmentDate)}
                           </Typography>
                         </Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                          <TimeIcon color="action" fontSize="small" />
-                          <Typography variant="body2">
-                            <strong>Time:</strong> {formatTime(appointment.startTime)} - {formatTime(appointment.endTime)}
+                          <TimeIcon sx={{ color: '#64748b', fontSize: '18px' }} />
+                          <Typography variant="body2" sx={{ color: '#475569', fontWeight: 500 }}>
+                            <strong style={{ color: '#1e293b' }}>Time:</strong> {formatTime(appointment.startTime)} - {formatTime(appointment.endTime)}
                           </Typography>
                         </Box>
                       </Grid>
                       <Grid item xs={12} md={6}>
-                        <Typography variant="body2" sx={{ mb: 1 }}>
-                          <strong>Reason:</strong> {appointment.reason || 'No reason provided'}
+                        <Typography variant="body2" sx={{ mb: 1, color: '#475569', fontWeight: 500 }}>
+                          <strong style={{ color: '#1e293b' }}>Reason:</strong> {appointment.reason || 'No reason provided'}
                         </Typography>
-                        <Typography variant="caption" color="textSecondary">
+                        <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 500 }}>
                           <strong>Created:</strong> {appointment.createdDate ? new Date(appointment.createdDate).toLocaleString() : 'Unknown'}
                         </Typography>
                       </Grid>
@@ -402,10 +491,22 @@ const AppointmentsList = () => {
                     {isPatient && appointment.status === 'COMPLETED' && (
                       <Box sx={{ mt: 2 }}>
                         <Button
-                          variant="contained"
+                          variant="outlined"
                           startIcon={<DescriptionIcon />}
                           onClick={() => handlePatientViewPrescription(appointment)}
                           size="small"
+                          sx={{
+                            border: '2px solid rgba(99, 102, 241, 0.2)',
+                            color: '#6366f1',
+                            background: 'rgba(255, 255, 255, 0.5)',
+                            backdropFilter: 'blur(10px)',
+                            borderRadius: '8px',
+                            fontWeight: 600,
+                            '&:hover': {
+                              border: '2px solid rgba(99, 102, 241, 0.4)',
+                              background: 'rgba(99, 102, 241, 0.08)',
+                            },
+                          }}
                         >
                           View Prescription
                         </Button>
@@ -420,45 +521,73 @@ const AppointmentsList = () => {
       </Grid>
 
       {filteredAppointments.length === 0 && !loading && (
-        <Card sx={{ textAlign: 'center', p: 4, borderRadius: 3 }}>
-          <CalendarIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2, opacity: 0.5 }} />
-          <Typography variant="h6" color="textSecondary" gutterBottom>
+        <Card 
+          sx={{ 
+            textAlign: 'center', 
+            p: 6, 
+            borderRadius: '24px',
+            background: 'rgba(255, 255, 255, 0.7)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+          }}
+        >
+          <CalendarIcon sx={{ fontSize: 64, color: '#cbd5e1', mb: 2, opacity: 0.7 }} />
+          <Typography 
+            variant="h6" 
+            sx={{ 
+              color: '#64748b', 
+              mb: 1,
+              fontWeight: 600,
+            }}
+          >
             No appointments found
           </Typography>
-          <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+          <Typography variant="body2" sx={{ color: '#94a3b8', fontWeight: 500 }}>
             {searchTerm || statusFilter !== 'all' 
               ? 'Try adjusting your search terms or filters' 
-              : 'Get started by booking your first appointment'}
+              : 'No appointments have been scheduled yet'
+            }
           </Typography>
         </Card>
       )}
 
+      {/* Rest of the dialogs and menus remain the same */}
       <Menu
         anchorEl={menuAnchor}
         open={Boolean(menuAnchor)}
         onClose={handleMenuClose}
+        PaperProps={{
+          sx: {
+            background: 'rgba(255, 255, 255, 0.9)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            borderRadius: '12px',
+            boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.1)',
+          }
+        }}
       >
         <MenuItem onClick={() => handleStatusClick(selectedAppointment)}>
-          <AcceptIcon sx={{ mr: 1 }} /> Update Status
+          <AcceptIcon sx={{ mr: 1, color: '#6366f1' }} /> Update Status
         </MenuItem>
         <MenuItem onClick={() => handleEditClick(selectedAppointment)}>
-          <EditIcon sx={{ mr: 1 }} /> Edit Reason
+          <EditIcon sx={{ mr: 1, color: '#10b981' }} /> Edit Reason
         </MenuItem>
         
         {isDoctor && (selectedAppointment?.status === 'COMPLETED' || selectedAppointment?.status === 'IN_PROGRESS') && (
           <MenuItem onClick={() => handlePrescriptionClick(selectedAppointment)}>
-            <DescriptionIcon sx={{ mr: 1 }} /> 
+            <DescriptionIcon sx={{ mr: 1, color: '#f59e0b' }} /> 
             {existingPrescription ? 'View Prescription' : 'Create Prescription'}
           </MenuItem>
         )}
         
         {hasPermission(user, 'manage_appointments') && (
-          <MenuItem onClick={() => handleDeleteClick(selectedAppointment)} sx={{ color: 'error.main' }}>
+          <MenuItem onClick={() => handleDeleteClick(selectedAppointment)} sx={{ color: '#ef4444' }}>
             <DeleteIcon sx={{ mr: 1 }} /> Delete Appointment
           </MenuItem>
         )}
       </Menu>
 
+      {/* Dialogs remain the same */}
       <Dialog open={statusDialogOpen} onClose={() => setStatusDialogOpen(false)}>
         <DialogTitle>Update Appointment Status</DialogTitle>
         <DialogContent>

@@ -9,10 +9,9 @@ import {
   Alert,
   MenuItem,
   Grid,
-  Paper,
-  Avatar,
   FormControlLabel,
   Switch,
+  alpha,
 } from '@mui/material';
 import {
   Person as PersonIcon,
@@ -114,15 +113,42 @@ const AddDoctor = () => {
   };
 
   return (
-    <Box>
-      <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
+    <Box sx={{ p: 3 }}>
+      <Typography 
+        variant="h4" 
+        component="h1" 
+        gutterBottom 
+        fontWeight="bold"
+        sx={{
+          background: 'linear-gradient(135deg, #1e293b 0%, #475569 100%)',
+          backgroundClip: 'text',
+          WebkitBackgroundClip: 'text',
+          color: 'transparent',
+        }}
+      >
         Add New Doctor
       </Typography>
 
-      <Card sx={{ borderRadius: 3 }}>
+      <Card 
+        sx={{ 
+          borderRadius: '24px',
+          background: 'rgba(255, 255, 255, 0.7)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.3)',
+          boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
+        }}
+      >
         <CardContent sx={{ p: 4 }}>
           {error && (
-            <Alert severity="error" sx={{ mb: 3 }}>
+            <Alert 
+              severity="error" 
+              sx={{ 
+                mb: 3,
+                borderRadius: '12px',
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.2)',
+              }}
+            >
               {error}
             </Alert>
           )}
@@ -131,7 +157,17 @@ const AddDoctor = () => {
             <Grid container spacing={3}>
               {/* Doctor Basic Information */}
               <Grid item xs={12}>
-                <Typography variant="h6" gutterBottom color="primary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography 
+                  variant="h5" 
+                  gutterBottom 
+                  sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 1,
+                    color: '#10b981',
+                    fontWeight: 600,
+                  }}
+                >
                   <PersonIcon /> Basic Information
                 </Typography>
               </Grid>
@@ -146,6 +182,13 @@ const AddDoctor = () => {
                   required
                   placeholder="Enter doctor's full name"
                   helperText="Full name as it should appear in records"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      background: 'rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(10px)',
+                    }
+                  }}
                 />
               </Grid>
 
@@ -159,6 +202,13 @@ const AddDoctor = () => {
                   onChange={handleChange}
                   required
                   placeholder="Select specialization"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      background: 'rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(10px)',
+                    }
+                  }}
                 >
                   {SPECIALIZATIONS.map((specialization) => (
                     <MenuItem key={specialization} value={specialization}>
@@ -170,7 +220,18 @@ const AddDoctor = () => {
 
               {/* Contact Information */}
               <Grid item xs={12}>
-                <Typography variant="h6" gutterBottom color="primary" sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2 }}>
+                <Typography 
+                  variant="h5" 
+                  gutterBottom 
+                  sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 1, 
+                    mt: 2,
+                    color: '#6366f1',
+                    fontWeight: 600,
+                  }}
+                >
                   <PhoneIcon /> Contact Information
                 </Typography>
               </Grid>
@@ -185,6 +246,13 @@ const AddDoctor = () => {
                   required
                   placeholder="Phone number or email"
                   helperText="Primary contact method for the doctor"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      background: 'rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(10px)',
+                    }
+                  }}
                 />
               </Grid>
 
@@ -198,6 +266,13 @@ const AddDoctor = () => {
                   onChange={handleChange}
                   placeholder="doctor@hospital.com"
                   helperText="Professional email address"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      background: 'rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(10px)',
+                    }
+                  }}
                 />
               </Grid>
 
@@ -210,12 +285,30 @@ const AddDoctor = () => {
                   onChange={handleChange}
                   placeholder="10-digit phone number"
                   helperText="Format: 1234567890"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      background: 'rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(10px)',
+                    }
+                  }}
                 />
               </Grid>
 
               {/* Professional Details */}
               <Grid item xs={12}>
-                <Typography variant="h6" gutterBottom color="primary" sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2 }}>
+                <Typography 
+                  variant="h5" 
+                  gutterBottom 
+                  sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 1, 
+                    mt: 2,
+                    color: '#f59e0b',
+                    fontWeight: 600,
+                  }}
+                >
                   <WorkIcon /> Professional Details
                 </Typography>
               </Grid>
@@ -231,6 +324,13 @@ const AddDoctor = () => {
                   placeholder="e.g., 5"
                   inputProps={{ min: 0, max: 50 }}
                   helperText="Number of years in practice"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      background: 'rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(10px)',
+                    }
+                  }}
                 />
               </Grid>
 
@@ -245,6 +345,13 @@ const AddDoctor = () => {
                   rows={3}
                   placeholder="e.g., MBBS, MD, Board Certified..."
                   helperText="List degrees, certifications, and special qualifications"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      background: 'rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(10px)',
+                    }
+                  }}
                 />
               </Grid>
 
@@ -264,7 +371,7 @@ const AddDoctor = () => {
                       <Typography variant="body1">
                         Available for Appointments
                       </Typography>
-                      <Typography variant="caption" color="textSecondary">
+                      <Typography variant="caption" sx={{ color: '#64748b' }}>
                         Doctor will appear in available doctors list
                       </Typography>
                     </Box>
@@ -278,7 +385,16 @@ const AddDoctor = () => {
                 type="submit"
                 variant="contained"
                 disabled={loading}
-                sx={{ borderRadius: 2, px: 4 }}
+                sx={{ 
+                  borderRadius: '12px', 
+                  px: 4,
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #0da271 0%, #047852 100%)',
+                    transform: 'translateY(-1px)',
+                  },
+                  transition: 'all 0.3s ease',
+                }}
                 size="large"
               >
                 {loading ? 'Adding Doctor...' : 'Add Doctor'}
@@ -286,7 +402,19 @@ const AddDoctor = () => {
               <Button
                 variant="outlined"
                 onClick={handleCancel}
-                sx={{ borderRadius: 2, px: 4 }}
+                sx={{ 
+                  borderRadius: '12px', 
+                  px: 4,
+                  border: '2px solid rgba(99, 102, 241, 0.2)',
+                  color: '#6366f1',
+                  background: 'rgba(255, 255, 255, 0.5)',
+                  backdropFilter: 'blur(10px)',
+                  '&:hover': {
+                    border: '2px solid rgba(99, 102, 241, 0.4)',
+                    background: 'rgba(99, 102, 241, 0.08)',
+                  },
+                  transition: 'all 0.3s ease',
+                }}
                 size="large"
               >
                 Cancel

@@ -1,4 +1,3 @@
-// components/Prescription/PrescriptionForm.js
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -15,6 +14,7 @@ import {
   CardContent,
   Chip,
   Divider,
+  alpha,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -59,7 +59,6 @@ const PrescriptionForm = ({ open, onClose, appointment, prescription: existingPr
     }
   }, [existingPrescription, open]);
 
-  // ✅ ADDED: Early return if appointment is null
   if (!appointment) {
     return null;
   }
@@ -93,7 +92,6 @@ const PrescriptionForm = ({ open, onClose, appointment, prescription: existingPr
       return;
     }
 
-    // ✅ ADDED: Check if appointment exists
     if (!appointment || !appointment.id) {
       enqueueSnackbar('Invalid appointment data', { variant: 'error' });
       return;
@@ -117,7 +115,7 @@ const PrescriptionForm = ({ open, onClose, appointment, prescription: existingPr
         enqueueSnackbar('Prescription created successfully', { variant: 'success' });
       }
       
-      onClose(true); // Refresh appointments list
+      onClose(true);
     } catch (error) {
       console.error('Error saving prescription:', error);
       enqueueSnackbar('Failed to save prescription', { variant: 'error' });
@@ -142,7 +140,6 @@ const PrescriptionForm = ({ open, onClose, appointment, prescription: existingPr
     }
   };
 
-  // ✅ ADDED: Safe data access with fallbacks
   const patientName = appointment.patientName || 'N/A';
   const patientAge = appointment.patientAge || 'N/A';
   const patientGender = appointment.patientGender || 'N/A';
@@ -151,11 +148,24 @@ const PrescriptionForm = ({ open, onClose, appointment, prescription: existingPr
   const appointmentDate = appointment.appointmentDate ? formatDate(appointment.appointmentDate) : 'N/A';
 
   return (
-    <Dialog open={open} onClose={() => onClose(false)} maxWidth="md" fullWidth>
+    <Dialog 
+      open={open} 
+      onClose={() => onClose(false)} 
+      maxWidth="md" 
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: '24px',
+          background: 'rgba(255, 255, 255, 0.9)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.3)',
+        }
+      }}
+    >
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <HospitalIcon color="primary" />
-          <Typography variant="h6" fontWeight="bold">
+          <HospitalIcon sx={{ color: '#6366f1' }} />
+          <Typography variant="h6" fontWeight="bold" sx={{ color: '#1e293b' }}>
             {isEdit ? 'Edit Prescription' : 'Create Prescription'}
           </Typography>
         </Box>
@@ -163,12 +173,19 @@ const PrescriptionForm = ({ open, onClose, appointment, prescription: existingPr
 
       <DialogContent>
         {/* Hospital Header */}
-        <Card sx={{ mb: 3, backgroundColor: 'primary.50' }}>
+        <Card 
+          sx={{ 
+            mb: 3, 
+            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            borderRadius: '16px',
+          }}
+        >
           <CardContent>
-            <Typography variant="h5" align="center" fontWeight="bold" color="primary">
+            <Typography variant="h5" align="center" fontWeight="bold" sx={{ color: '#6366f1' }}>
               🏥 CITY GENERAL HOSPITAL
             </Typography>
-            <Typography variant="body2" align="center" color="text.secondary">
+            <Typography variant="body2" align="center" sx={{ color: '#64748b', fontWeight: 500 }}>
               Quality Healthcare Services
             </Typography>
           </CardContent>
@@ -177,24 +194,33 @@ const PrescriptionForm = ({ open, onClose, appointment, prescription: existingPr
         {/* Patient and Doctor Details */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
           <Grid item xs={12} md={6}>
-            <Typography variant="subtitle2" color="text.secondary">PATIENT DETAILS</Typography>
-            <Typography variant="body1" fontWeight="bold">{patientName}</Typography>
-            <Typography variant="body2">
+            <Typography variant="subtitle2" sx={{ color: '#64748b', fontWeight: 600 }}>PATIENT DETAILS</Typography>
+            <Typography variant="body1" fontWeight="bold" sx={{ color: '#1e293b' }}>{patientName}</Typography>
+            <Typography variant="body2" sx={{ color: '#475569', fontWeight: 500 }}>
               Age: {patientAge} • Gender: {patientGender}
             </Typography>
-            <Typography variant="body2">
+            <Typography variant="body2" sx={{ color: '#475569', fontWeight: 500 }}>
               Appointment: {appointmentDate}
             </Typography>
           </Grid>
           <Grid item xs={12} md={6}>
-            <Typography variant="subtitle2" color="text.secondary">DOCTOR DETAILS</Typography>
-            <Typography variant="body1" fontWeight="bold">Dr. {doctorName}</Typography>
-            <Typography variant="body2">{doctorSpecialization}</Typography>
-            <Chip label="Consultant" size="small" color="primary" sx={{ mt: 1 }} />
+            <Typography variant="subtitle2" sx={{ color: '#64748b', fontWeight: 600 }}>DOCTOR DETAILS</Typography>
+            <Typography variant="body1" fontWeight="bold" sx={{ color: '#1e293b' }}>Dr. {doctorName}</Typography>
+            <Typography variant="body2" sx={{ color: '#475569', fontWeight: 500 }}>{doctorSpecialization}</Typography>
+            <Chip 
+              label="Consultant" 
+              size="small" 
+              sx={{
+                mt: 1,
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: 'white',
+                fontWeight: '600',
+              }}
+            />
           </Grid>
         </Grid>
 
-        <Divider sx={{ my: 2 }} />
+        <Divider sx={{ my: 2, borderColor: 'rgba(255, 255, 255, 0.3)' }} />
 
         {/* Diagnosis */}
         <TextField
@@ -206,6 +232,13 @@ const PrescriptionForm = ({ open, onClose, appointment, prescription: existingPr
           onChange={(e) => setFormData({ ...formData, diagnosis: e.target.value })}
           sx={{ mb: 3 }}
           placeholder="Enter patient diagnosis and symptoms..."
+          InputProps={{
+            sx: {
+              borderRadius: '12px',
+              background: 'rgba(255, 255, 255, 0.8)',
+              backdropFilter: 'blur(10px)',
+            }
+          }}
         />
 
         {/* Instructions */}
@@ -218,6 +251,13 @@ const PrescriptionForm = ({ open, onClose, appointment, prescription: existingPr
           onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
           sx={{ mb: 3 }}
           placeholder="Enter instructions for the patient..."
+          InputProps={{
+            sx: {
+              borderRadius: '12px',
+              background: 'rgba(255, 255, 255, 0.8)',
+              backdropFilter: 'blur(10px)',
+            }
+          }}
         />
 
         {/* Follow-up Date */}
@@ -229,15 +269,32 @@ const PrescriptionForm = ({ open, onClose, appointment, prescription: existingPr
           onChange={(e) => setFormData({ ...formData, followUpDate: e.target.value })}
           InputLabelProps={{ shrink: true }}
           sx={{ mb: 3 }}
+          InputProps={{
+            sx: {
+              borderRadius: '12px',
+              background: 'rgba(255, 255, 255, 0.8)',
+              backdropFilter: 'blur(10px)',
+            }
+          }}
         />
 
         {/* Medications Section */}
-        <Typography variant="h6" gutterBottom>
+        <Typography variant="h6" gutterBottom sx={{ color: '#1e293b', fontWeight: 600 }}>
           💊 Medications
         </Typography>
 
         {formData.medications.map((medication, index) => (
-          <Card key={index} sx={{ mb: 2, p: 2 }}>
+          <Card 
+            key={index} 
+            sx={{ 
+              mb: 2, 
+              p: 2,
+              background: 'rgba(255, 255, 255, 0.7)',
+              backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              borderRadius: '12px',
+            }}
+          >
             <Grid container spacing={2} alignItems="center">
               <Grid item xs={12} sm={3}>
                 <TextField
@@ -246,6 +303,12 @@ const PrescriptionForm = ({ open, onClose, appointment, prescription: existingPr
                   value={medication.medicineName}
                   onChange={(e) => handleMedicationChange(index, 'medicineName', e.target.value)}
                   size="small"
+                  InputProps={{
+                    sx: {
+                      borderRadius: '8px',
+                      background: 'rgba(255, 255, 255, 0.8)',
+                    }
+                  }}
                 />
               </Grid>
               <Grid item xs={12} sm={2}>
@@ -256,6 +319,12 @@ const PrescriptionForm = ({ open, onClose, appointment, prescription: existingPr
                   onChange={(e) => handleMedicationChange(index, 'dosage', e.target.value)}
                   size="small"
                   placeholder="e.g., 500mg"
+                  InputProps={{
+                    sx: {
+                      borderRadius: '8px',
+                      background: 'rgba(255, 255, 255, 0.8)',
+                    }
+                  }}
                 />
               </Grid>
               <Grid item xs={12} sm={2}>
@@ -266,6 +335,12 @@ const PrescriptionForm = ({ open, onClose, appointment, prescription: existingPr
                   onChange={(e) => handleMedicationChange(index, 'frequency', e.target.value)}
                   size="small"
                   placeholder="e.g., 2 times daily"
+                  InputProps={{
+                    sx: {
+                      borderRadius: '8px',
+                      background: 'rgba(255, 255, 255, 0.8)',
+                    }
+                  }}
                 />
               </Grid>
               <Grid item xs={12} sm={2}>
@@ -276,6 +351,12 @@ const PrescriptionForm = ({ open, onClose, appointment, prescription: existingPr
                   onChange={(e) => handleMedicationChange(index, 'duration', e.target.value)}
                   size="small"
                   placeholder="e.g., 7 days"
+                  InputProps={{
+                    sx: {
+                      borderRadius: '8px',
+                      background: 'rgba(255, 255, 255, 0.8)',
+                    }
+                  }}
                 />
               </Grid>
               <Grid item xs={12} sm={2}>
@@ -285,12 +366,18 @@ const PrescriptionForm = ({ open, onClose, appointment, prescription: existingPr
                   value={medication.notes}
                   onChange={(e) => handleMedicationChange(index, 'notes', e.target.value)}
                   size="small"
+                  InputProps={{
+                    sx: {
+                      borderRadius: '8px',
+                      background: 'rgba(255, 255, 255, 0.8)',
+                    }
+                  }}
                 />
               </Grid>
               <Grid item xs={12} sm={1}>
                 <IconButton
                   onClick={() => removeMedication(index)}
-                  color="error"
+                  sx={{ color: '#ef4444' }}
                   disabled={formData.medications.length === 1}
                 >
                   <DeleteIcon />
@@ -304,7 +391,19 @@ const PrescriptionForm = ({ open, onClose, appointment, prescription: existingPr
           startIcon={<AddIcon />}
           onClick={addMedication}
           variant="outlined"
-          sx={{ mb: 3 }}
+          sx={{ 
+            mb: 3,
+            border: '2px solid rgba(99, 102, 241, 0.2)',
+            color: '#6366f1',
+            background: 'rgba(255, 255, 255, 0.5)',
+            backdropFilter: 'blur(10px)',
+            borderRadius: '8px',
+            '&:hover': {
+              border: '2px solid rgba(99, 102, 241, 0.4)',
+              background: 'rgba(99, 102, 241, 0.08)',
+            },
+            transition: 'all 0.3s ease',
+          }}
         >
           Add Medication
         </Button>
@@ -312,17 +411,46 @@ const PrescriptionForm = ({ open, onClose, appointment, prescription: existingPr
 
       <DialogActions>
         {isEdit && (
-          <Button onClick={handleDelete} color="error" disabled={loading}>
+          <Button 
+            onClick={handleDelete} 
+            sx={{ color: '#ef4444' }}
+            disabled={loading}
+          >
             Delete Prescription
           </Button>
         )}
-        <Button onClick={() => onClose(false)} disabled={loading}>
+        <Button 
+          onClick={() => onClose(false)} 
+          disabled={loading}
+          sx={{
+            border: '2px solid rgba(99, 102, 241, 0.2)',
+            color: '#6366f1',
+            background: 'rgba(255, 255, 255, 0.5)',
+            backdropFilter: 'blur(10px)',
+            borderRadius: '8px',
+            '&:hover': {
+              border: '2px solid rgba(99, 102, 241, 0.4)',
+              background: 'rgba(99, 102, 241, 0.08)',
+            },
+            transition: 'all 0.3s ease',
+          }}
+        >
           Cancel
         </Button>
         <Button
           onClick={handleSubmit}
           variant="contained"
           disabled={loading || !formData.diagnosis.trim()}
+          sx={{
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            borderRadius: '8px',
+            fontWeight: 600,
+            '&:hover': {
+              background: 'linear-gradient(135deg, #0da271 0%, #047852 100%)',
+              transform: 'translateY(-1px)',
+            },
+            transition: 'all 0.3s ease',
+          }}
         >
           {loading ? 'Saving...' : (isEdit ? 'Update Prescription' : 'Save Prescription')}
         </Button>
