@@ -90,32 +90,58 @@ const BookAppointment = () => {
       setLoading(true);
       setCheckingProfile(true);
       
+      console.log('🔄 Loading initial data for appointment booking...');
+      
+      // Load doctors first
+      console.log('👨‍⚕️ Loading doctors list...');
       const doctorsData = await doctorService.getAll();
-      console.log('👨‍⚕️ Doctors loaded:', doctorsData);
+      console.log('✅ Doctors loaded:', doctorsData);
       setDoctors(doctorsData);
 
+      // Check patient profile
       if (user && hasRole('PATIENT')) {
         try {
-          await patientService.getMyPatientProfile();
+          console.log('🔍 Checking patient profile for user:', user.username);
+          const patientProfile = await patientService.getMyPatientProfile();
+          console.log('✅ Patient profile found:', patientProfile);
           setHasPatientProfile(true);
+          
+          // Set the patient ID for the form
+          setFormData(prev => ({ 
+            ...prev, 
+            patientId: patientProfile.id 
+          }));
         } catch (error) {
-          console.log('Patient profile not found:', error.message);
+          console.log('❌ Patient profile not found:', error.message);
           setHasPatientProfile(false);
         }
       } else {
+        console.log('👤 User is not a patient, skipping profile check');
         setHasPatientProfile(true);
       }
 
+      // Load patients list for admins/doctors
       if (hasPermission(user, 'manage_patients')) {
         const patientsData = await patientService.getAll();
+        console.log('👥 Patients loaded:', patientsData.length, 'patients');
         setPatients(patientsData);
       } else {
-        setPatients([{ id: 'self', name: user?.username || 'Current User', age: 'N/A', gender: 'N/A' }]);
-        setFormData(prev => ({ ...prev, patientId: 'self' }));
+        // For regular patients, use their own profile
+        setPatients([]);
+        console.log('ℹ️ User cannot manage patients, using own profile');
       }
+
+      console.log('✅ Initial data loaded successfully');
+      console.log('📊 Data summary:', {
+        doctors: doctorsData.length,
+        patients: patients.length,
+        hasPatientProfile,
+        userRole: user?.roles?.[0]
+      });
+      
     } catch (err) {
-      console.error('Error loading initial data:', err);
-      setError('Failed to load initial data');
+      console.error('❌ Error loading initial data:', err);
+      setError('Failed to load initial data. Please refresh the page.');
       enqueueSnackbar('Failed to load data', { variant: 'error' });
     } finally {
       setLoading(false);
@@ -123,28 +149,26 @@ const BookAppointment = () => {
     }
   };
 
-const loadAvailableSlots = async () => {
-  try {
-    console.log('🔄 Loading available slots for doctor ID:', formData.doctorId);
-    
-    // Get the selected doctor to find their user ID
-    const selectedDoctor = doctors.find(d => d.id === parseInt(formData.doctorId));
-    if (!selectedDoctor) {
-      throw new Error('Selected doctor not found');
+  const loadAvailableSlots = async () => {
+    try {
+      console.log('🔄 Loading available slots for doctor ID:', formData.doctorId);
+      
+      if (!formData.doctorId) {
+        console.error('❌ No doctor ID selected');
+        setAvailableSlots([]);
+        return;
+      }
+
+      // ✅ FIXED: Use doctor ID directly
+      const slots = await scheduleService.getAvailableByDoctor(parseInt(formData.doctorId));
+      console.log('✅ Available slots loaded:', slots);
+      setAvailableSlots(slots);
+    } catch (err) {
+      console.error('❌ Error loading available slots:', err);
+      enqueueSnackbar('Failed to load available slots', { variant: 'error' });
+      setAvailableSlots([]);
     }
-    
-    console.log('👨‍⚕️ Selected doctor:', selectedDoctor.name, 'User ID:', selectedDoctor.userId);
-    
-    // Use the doctor's user ID to fetch schedules
-    const slots = await scheduleService.getAvailableByDoctor(selectedDoctor.userId);
-    console.log('✅ Available slots loaded:', slots);
-    setAvailableSlots(slots);
-  } catch (err) {
-    console.error('❌ Error loading available slots:', err);
-    enqueueSnackbar('Failed to load available slots', { variant: 'error' });
-    setAvailableSlots([]);
-  }
-};
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -342,39 +366,63 @@ const loadAvailableSlots = async () => {
             >
               <DoctorIcon /> Choose Doctor
             </Typography>
-            <FormControl fullWidth>
-              <InputLabel>Select Doctor *</InputLabel>
-              <Select
-                name="doctorId"
-                value={formData.doctorId}
-                onChange={handleChange}
-                label="Select Doctor *"
-                required
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '12px',
-                    background: 'rgba(255, 255, 255, 0.8)',
-                    backdropFilter: 'blur(10px)',
-                  }
+            
+            {doctors.length === 0 ? (
+              <Alert 
+                severity="warning" 
+                sx={{ 
+                  mb: 3,
+                  borderRadius: '12px',
+                  background: 'rgba(245, 158, 11, 0.1)',
+                  border: '1px solid rgba(245, 158, 11, 0.2)',
                 }}
               >
-                {doctors.map((doctor) => (
-                  <MenuItem key={doctor.id} value={doctor.id}> {/* ✅ FIXED: Use doctor.id instead of doctor.userId */}
-                    <Box>
-                      <Typography variant="body1" fontWeight="bold">
-                        Dr. {doctor.name || 'Unnamed Doctor'}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: '#64748b' }}>
-                        {doctor.specialization || 'General'} • Contact: {doctor.contact || 'Not provided'}
-                      </Typography>
-                      <Typography variant="caption" display="block" sx={{ color: '#10b981', fontSize: '0.7rem' }}>
-                        Doctor ID: {doctor.id} • User ID: {doctor.userId}
-                      </Typography>
-                    </Box>
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>            
+                <Typography variant="body1" fontWeight="bold">
+                  No Doctors Available
+                </Typography>
+                <Typography variant="body2">
+                  There are no doctors registered in the system yet.
+                </Typography>
+                <Typography variant="body2" sx={{ mt: 1 }}>
+                  Please contact the hospital administration to add doctors to the system.
+                </Typography>
+              </Alert>
+            ) : (
+              <FormControl fullWidth>
+                <InputLabel>Select Doctor *</InputLabel>
+                <Select
+                  name="doctorId"
+                  value={formData.doctorId}
+                  onChange={handleChange}
+                  label="Select Doctor *"
+                  required
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      background: 'rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(10px)',
+                    }
+                  }}
+                >
+                  {doctors.map((doctor) => (
+                    <MenuItem key={doctor.id} value={doctor.id}>
+                      <Box>
+                        <Typography variant="body1" fontWeight="bold">
+                          Dr. {doctor.name || 'Unnamed Doctor'}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: '#64748b' }}>
+                          {doctor.specialization || 'General'} • Contact: {doctor.contact || 'Not provided'}
+                        </Typography>
+                        <Typography variant="caption" display="block" sx={{ color: '#10b981', fontSize: '0.7rem' }}>
+                          Doctor ID: {doctor.id}
+                        </Typography>
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
+            
             {getSelectedDoctor() && (
               <Paper 
                 sx={{ 

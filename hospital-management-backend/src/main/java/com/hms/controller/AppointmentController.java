@@ -3,6 +3,7 @@ package com.hms.controller;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -35,13 +36,20 @@ public class AppointmentController {
         
         String username = authentication.getName();
         System.out.println("📅 Creating appointment for user: " + username);
+        System.out.println("📦 Appointment data received: " + appointment);
         
         try {
             AppointmentResponseDTO createdAppointment = appointmentService.createAppointment(appointment, username);
             return ResponseEntity.ok(createdAppointment);
         } catch (RuntimeException e) {
             System.err.println("❌ Error creating appointment: " + e.getMessage());
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse("APPOINTMENT_CREATION_FAILED", e.getMessage()));
+        } catch (Exception e) {
+            System.err.println("❌ Unexpected error creating appointment: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("SERVER_ERROR", "An unexpected error occurred"));
         }
     }
 
@@ -222,5 +230,24 @@ public class AppointmentController {
             System.err.println("❌ Error fetching appointment stats: " + e.getMessage());
             return ResponseEntity.internalServerError().body("Error fetching statistics");
         }
+    }
+
+    // ✅ ADDED: Error response class for better error handling
+    public static class ErrorResponse {
+        private String error;
+        private String message;
+        
+        public ErrorResponse() {}
+        
+        public ErrorResponse(String error, String message) {
+            this.error = error;
+            this.message = message;
+        }
+        
+        public String getError() { return error; }
+        public void setError(String error) { this.error = error; }
+        
+        public String getMessage() { return message; }
+        public void setMessage(String message) { this.message = message; }
     }
 }

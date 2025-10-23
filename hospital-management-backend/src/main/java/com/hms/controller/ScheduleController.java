@@ -37,14 +37,13 @@ public class ScheduleController {
         return ResponseEntity.ok(convertToDTO(savedSchedule));
     }
 
-    // Doctor creates their own schedule - ✅ FIXED: Auto-creates doctor profile
-    @PostMapping("/doctor/{userId}")
+    // Doctor creates their own schedule - ✅ FIXED: Now accepts doctorId directly
+    @PostMapping("/doctor/{doctorId}")
     public ResponseEntity<ScheduleResponseDTO> createScheduleByDoctor(
-            @PathVariable Long userId, 
+            @PathVariable Long doctorId, 
             @RequestBody ScheduleRequestDTO scheduleRequest) {
-        System.out.println("🔄 Creating schedule for user ID: " + userId);
+        System.out.println("🔄 Creating schedule for doctor ID: " + doctorId);
         
-        // Create schedule without doctor ID in DTO - use path variable instead
         DoctorSchedule schedule = new DoctorSchedule();
         schedule.setAvailableDate(scheduleRequest.getAvailableDate());
         schedule.setStartTime(scheduleRequest.getStartTime());
@@ -52,37 +51,37 @@ public class ScheduleController {
         schedule.setSlotDuration(scheduleRequest.getSlotDuration());
         schedule.setMaxPatients(scheduleRequest.getMaxPatients());
         
-        DoctorSchedule savedSchedule = scheduleService.createDoctorSchedule(schedule, userId);
+        DoctorSchedule savedSchedule = scheduleService.createDoctorSchedule(schedule, doctorId);
         return ResponseEntity.ok(convertToDTO(savedSchedule));
     }
 
-    // Get available slots for patients - ✅ FIXED: Add debugging
-    @GetMapping("/doctor/{userId}/available")
-    public ResponseEntity<List<ScheduleResponseDTO>> getAvailableSchedules(@PathVariable Long userId) {
-        System.out.println("🔍 PATIENT REQUEST: Looking for schedules for doctor user ID: " + userId);
-        List<DoctorSchedule> schedules = scheduleService.getAvailableSchedulesForDoctor(userId);
+    // Get available slots for patients - ✅ FIXED: Now accepts doctorId directly
+    @GetMapping("/doctor/{doctorId}/available")
+    public ResponseEntity<List<ScheduleResponseDTO>> getAvailableSchedules(@PathVariable Long doctorId) {
+        System.out.println("🔍 PATIENT REQUEST: Looking for schedules for doctor ID: " + doctorId);
+        List<DoctorSchedule> schedules = scheduleService.getAvailableSchedulesForDoctor(doctorId);
         List<ScheduleResponseDTO> responseDTOs = schedules.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
-        System.out.println("✅ Returning " + responseDTOs.size() + " available schedules for doctor user ID: " + userId);
+        System.out.println("✅ Returning " + responseDTOs.size() + " available schedules for doctor ID: " + doctorId);
         return ResponseEntity.ok(responseDTOs);
     }
 
-    // Get all schedules for admin view
-    @GetMapping("/doctor/{userId}")
-    public ResponseEntity<List<ScheduleResponseDTO>> getAllSchedulesForDoctor(@PathVariable Long userId) {
-        List<DoctorSchedule> schedules = scheduleService.getSchedulesForDoctor(userId);
+    // Get all schedules for admin view - ✅ FIXED: Now accepts doctorId directly
+    @GetMapping("/doctor/{doctorId}")
+    public ResponseEntity<List<ScheduleResponseDTO>> getAllSchedulesForDoctor(@PathVariable Long doctorId) {
+        List<DoctorSchedule> schedules = scheduleService.getSchedulesForDoctor(doctorId);
         List<ScheduleResponseDTO> responseDTOs = schedules.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(responseDTOs);
     }
 
-    // Get doctor's own schedules
-    @GetMapping("/doctor/{userId}/my-schedules")
-    public ResponseEntity<List<ScheduleResponseDTO>> getDoctorOwnSchedules(@PathVariable Long userId) {
-        System.out.println("🔄 Getting doctor's own schedules for user ID: " + userId);
-        List<DoctorSchedule> schedules = scheduleService.getSchedulesCreatedByDoctor(userId);
+    // Get doctor's own schedules - ✅ FIXED: Now accepts doctorId directly
+    @GetMapping("/doctor/{doctorId}/my-schedules")
+    public ResponseEntity<List<ScheduleResponseDTO>> getDoctorOwnSchedules(@PathVariable Long doctorId) {
+        System.out.println("🔄 Getting doctor's own schedules for doctor ID: " + doctorId);
+        List<DoctorSchedule> schedules = scheduleService.getSchedulesCreatedByDoctor(doctorId);
         List<ScheduleResponseDTO> responseDTOs = schedules.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());

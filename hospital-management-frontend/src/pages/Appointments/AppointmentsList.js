@@ -551,7 +551,7 @@ const AppointmentsList = () => {
         </Card>
       )}
 
-      {/* Rest of the dialogs and menus remain the same */}
+      {/* Menu with role-based options */}
       <Menu
         anchorEl={menuAnchor}
         open={Boolean(menuAnchor)}
@@ -580,7 +580,8 @@ const AppointmentsList = () => {
           </MenuItem>
         )}
         
-        {hasPermission(user, 'manage_appointments') && (
+        {/* Only show delete option for ADMIN */}
+        {user?.roles?.includes('ROLE_ADMIN') && (
           <MenuItem onClick={() => handleDeleteClick(selectedAppointment)} sx={{ color: '#ef4444' }}>
             <DeleteIcon sx={{ mr: 1 }} /> Delete Appointment
           </MenuItem>

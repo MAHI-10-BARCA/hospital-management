@@ -12,16 +12,15 @@ import com.hms.entity.User;
 
 public interface PatientRepository extends JpaRepository<Patient, Long> {
     
-    // ✅ ADD THIS: Find patient by user
     Optional<Patient> findByUser(User user);
     
-    // ✅ ADD THIS: Find patient by user ID
-    Optional<Patient> findByUserId(Long userId);
-        @Query("SELECT DISTINCT a.patient FROM Appointment a WHERE a.doctor.id IN " +
-           "(SELECT d.id FROM Doctor d WHERE d.user.id = :doctorUserId)")
+    // ✅ ADD THIS: Find patients by doctor's user ID (through appointments)
+    @Query("SELECT DISTINCT p FROM Patient p JOIN Appointment a ON p.id = a.patient.id WHERE a.doctor.user.id = :doctorUserId")
     List<Patient> findPatientsByDoctorUserId(@Param("doctorUserId") Long doctorUserId);
     
-    // Alternative method if you prefer using doctor ID directly
-    @Query("SELECT DISTINCT a.patient FROM Appointment a WHERE a.doctor.id = :doctorId")
-    List<Patient> findPatientsByDoctorId(@Param("doctorId") Long doctorId);
+    // ✅ ADD THIS: Find patients without user accounts
+    List<Patient> findByUserIsNull();
+    
+    // ✅ ADD THIS: Check if patient exists by name and details (optional)
+    Optional<Patient> findByNameAndAgeAndGender(String name, int age, String gender);
 }

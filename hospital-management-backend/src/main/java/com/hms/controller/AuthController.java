@@ -20,7 +20,11 @@ import org.springframework.web.bind.annotation.RestController;
 import com.hms.dto.JwtRequest;
 import com.hms.dto.JwtResponse;
 import com.hms.dto.RegistrationRequest;
+import com.hms.entity.Doctor;
+import com.hms.entity.Patient;
 import com.hms.entity.User;
+import com.hms.repository.DoctorRepository;
+import com.hms.repository.PatientRepository;
 import com.hms.repository.UserRepository;
 import com.hms.util.JwtUtil;
 
@@ -31,6 +35,12 @@ public class AuthController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private PatientRepository patientRepository;
+
+    @Autowired
+    private DoctorRepository doctorRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -78,7 +88,49 @@ public class AuthController {
 
         User savedUser = userRepository.save(user);
         System.out.println("✅ User registered successfully: " + savedUser.getUsername() + " with ID: " + savedUser.getId());
+
+        // ✅ AUTO-CREATE PROFILE BASED ON ROLE
+        try {
+            autoCreateProfile(savedUser, registrationRequest);
+            System.out.println("✅ Auto-created profile for user: " + savedUser.getUsername());
+        } catch (Exception e) {
+            System.err.println("⚠️ Could not auto-create profile for user: " + savedUser.getUsername() + " - " + e.getMessage());
+            // Don't fail registration if profile creation fails
+        }
+
         return ResponseEntity.ok("User registered successfully!");
+    }
+
+    /**
+     * Auto-create patient or doctor profile based on user role
+     */
+    private void autoCreateProfile(User user, RegistrationRequest request) {
+        Set<String> roles = user.getRoles();
+        
+        if (roles.contains("ROLE_PATIENT")) {
+            // Auto-create patient profile
+            Patient patient = new Patient();
+            patient.setName(user.getUsername()); // Use username as default name
+            patient.setAge(0); // Default age
+            patient.setGender("Not specified"); // Default gender
+            patient.setUser(user);
+            
+            patientRepository.save(patient);
+            System.out.println("✅ Auto-created patient profile for: " + user.getUsername());
+            
+        } else if (roles.contains("ROLE_DOCTOR")) {
+            // Auto-create doctor profile
+            Doctor doctor = new Doctor();
+            doctor.setName(user.getUsername()); // Use username as default name
+            doctor.setSpecialization("General"); // Default specialization
+            doctor.setContact("Not provided"); // Default contact
+            doctor.setUser(user);
+            
+            doctorRepository.save(doctor);
+            System.out.println("✅ Auto-created doctor profile for: " + user.getUsername());
+        }
+        
+        // For ROLE_USER or other roles, no auto-profile creation needed
     }
 
     @PostMapping("/login")

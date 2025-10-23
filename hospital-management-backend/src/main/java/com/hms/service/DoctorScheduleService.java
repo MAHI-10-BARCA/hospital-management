@@ -32,12 +32,15 @@ public class DoctorScheduleService {
         return scheduleRepository.save(schedule);
     }
 
-    public DoctorSchedule createDoctorSchedule(DoctorSchedule schedule, Long userId) {
-        System.out.println("🔄 Creating schedule for user ID: " + userId);
+    // ✅ FIXED: Now accepts doctorId directly
+    public DoctorSchedule createDoctorSchedule(DoctorSchedule schedule, Long doctorId) {
+        System.out.println("🔄 Creating schedule for doctor ID: " + doctorId);
         
-        // ✅ FIXED: Auto-create doctor profile if not exists
-        Doctor doctor = doctorService.getOrCreateDoctorForUser(userId);
-        System.out.println("✅ Using doctor ID: " + doctor.getId() + " for user ID: " + userId);
+        // Find doctor by ID directly
+        Doctor doctor = doctorRepository.findById(doctorId)
+                .orElseThrow(() -> new RuntimeException("Doctor not found with ID: " + doctorId));
+        
+        System.out.println("✅ Using doctor: " + doctor.getName() + " (ID: " + doctor.getId() + ")");
         
         schedule.setDoctor(doctor);
         schedule.setCreatedBy("DOCTOR");
@@ -45,34 +48,42 @@ public class DoctorScheduleService {
         return scheduleRepository.save(schedule);
     }
 
-    public List<DoctorSchedule> getAvailableSchedulesForDoctor(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    // ✅ FIXED: Now accepts doctorId directly
+    public List<DoctorSchedule> getAvailableSchedulesForDoctor(Long doctorId) {
+        System.out.println("🔍 Looking for available schedules for doctor ID: " + doctorId);
         
-        Doctor doctor = doctorRepository.findByUser(user)
-                .orElseThrow(() -> new RuntimeException("Doctor not found for user: " + userId));
+        // Verify doctor exists
+        if (!doctorRepository.existsById(doctorId)) {
+            throw new RuntimeException("Doctor not found with ID: " + doctorId);
+        }
         
-        return scheduleRepository.findAvailableSchedulesByDoctor(doctor.getId());
+        List<DoctorSchedule> schedules = scheduleRepository.findAvailableSchedulesByDoctor(doctorId);
+        System.out.println("✅ Found " + schedules.size() + " available schedules for doctor ID: " + doctorId);
+        return schedules;
     }
 
-    public List<DoctorSchedule> getSchedulesForDoctor(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    // ✅ FIXED: Now accepts doctorId directly
+    public List<DoctorSchedule> getSchedulesForDoctor(Long doctorId) {
+        System.out.println("🔍 Getting all schedules for doctor ID: " + doctorId);
         
-        Doctor doctor = doctorRepository.findByUser(user)
-                .orElseThrow(() -> new RuntimeException("Doctor not found for user: " + userId));
+        // Verify doctor exists
+        if (!doctorRepository.existsById(doctorId)) {
+            throw new RuntimeException("Doctor not found with ID: " + doctorId);
+        }
         
-        return scheduleRepository.findByDoctorId(doctor.getId());
+        return scheduleRepository.findByDoctorId(doctorId);
     }
 
-    public List<DoctorSchedule> getSchedulesCreatedByDoctor(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    // ✅ FIXED: Now accepts doctorId directly
+    public List<DoctorSchedule> getSchedulesCreatedByDoctor(Long doctorId) {
+        System.out.println("🔍 Getting doctor-created schedules for doctor ID: " + doctorId);
         
-        Doctor doctor = doctorRepository.findByUser(user)
-                .orElseThrow(() -> new RuntimeException("Doctor not found for user: " + userId));
+        // Verify doctor exists
+        if (!doctorRepository.existsById(doctorId)) {
+            throw new RuntimeException("Doctor not found with ID: " + doctorId);
+        }
         
-        return scheduleRepository.findByDoctorId(doctor.getId()).stream()
+        return scheduleRepository.findByDoctorId(doctorId).stream()
                 .filter(schedule -> "DOCTOR".equals(schedule.getCreatedBy()))
                 .toList();
     }

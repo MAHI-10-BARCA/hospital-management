@@ -108,7 +108,8 @@ const PatientsList = () => {
         >
           Patients
         </Typography>
-        {hasPermission(user, 'manage_patients') && (
+        {/* Allow both ADMIN and DOCTOR to add patients */}
+        {(user?.roles?.includes('ROLE_ADMIN') || user?.roles?.includes('ROLE_DOCTOR')) && (
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -274,7 +275,8 @@ const PatientsList = () => {
                   </Typography>
                 </Box>
 
-                {hasPermission(user, 'manage_patients') && (
+                {/* Only ADMIN can edit/delete patients - DOCTOR cannot */}
+                {user?.roles?.includes('ROLE_ADMIN') && (
                   <Box sx={{ display: 'flex', gap: 1 }}>
                     <IconButton
                       size="small"

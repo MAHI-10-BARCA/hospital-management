@@ -11,7 +11,7 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "patient") // ✅ ADDED: Consistent singular naming
+@Table(name = "patient")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Patient {
 
@@ -23,8 +23,9 @@ public class Patient {
     private int age;
     private String gender;
 
+    // ✅ FIXED: Make User optional by removing unique constraint
     @OneToOne
-    @JoinColumn(name = "user_id", unique = true)
+    @JoinColumn(name = "user_id")
     private User user;
 
     public Patient() {}
@@ -34,6 +35,14 @@ public class Patient {
         this.age = age;
         this.gender = gender;
         this.user = user;
+    }
+
+    // ✅ ADD: Constructor without User for doctor-created patients
+    public Patient(String name, int age, String gender) {
+        this.name = name;
+        this.age = age;
+        this.gender = gender;
+        this.user = null;
     }
 
     // Getters and Setters
