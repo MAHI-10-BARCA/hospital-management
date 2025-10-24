@@ -18,10 +18,13 @@ import {
   Delete as DeleteIcon,
   Person as PatientIcon,
   Search as SearchIcon,
+  CalendarToday as CalendarIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
 import { patientService } from '../../services/patientService';
+import { appointmentService } from '../../services/appointmentService';
+import { doctorService } from '../../services/doctorService';
 import { useAuth } from '../../contexts/AuthContext';
 import { hasPermission } from '../../utils/helpers';
 import LoadingSpinner from '../../components/Common/LoadingSpinner';
@@ -47,9 +50,75 @@ const PatientsList = () => {
   const loadPatients = async () => {
     try {
       setLoading(true);
-      const data = await patientService.getAll();
-      setPatients(data);
+      
+      let patientsData = [];
+      
+      if (user?.roles?.includes('ROLE_ADMIN')) {
+        // Admin sees all patients
+        patientsData = await patientService.getAll();
+        console.log('👑 ADMIN: Loading all patients from database');
+      } else if (user?.roles?.includes('ROLE_DOCTOR')) {
+        // ✅ DOCTOR: Only see patients who have appointments with them
+        const doctorProfile = await doctorService.getMyDoctorProfile();
+        const appointments = await appointmentService.getByDoctor(doctorProfile.id);
+        
+        // Extract unique patients from doctor's appointments
+        const uniquePatientIds = new Set();
+        const doctorPatients = [];
+        
+        appointments.forEach(apt => {
+          if (apt.patientId && !uniquePatientIds.has(apt.patientId)) {
+            uniquePatientIds.add(apt.patientId);
+            doctorPatients.push({
+              id: apt.patientId,
+              name: apt.patientName || 'Unknown Patient',
+              // Get additional details if available
+              lastAppointment: apt.appointmentDate || apt.availableDate,
+              appointmentStatus: apt.status
+            });
+          }
+        });
+        
+        console.log(`👨‍⚕️ DOCTOR ${doctorProfile.id}: Found ${doctorPatients.length} patients from ${appointments.length} appointments`);
+        
+        // Try to get full patient details
+        patientsData = await Promise.all(
+          doctorPatients.map(async (patient) => {
+            try {
+              const fullPatient = await patientService.getById(patient.id);
+              return {
+                ...fullPatient,
+                lastAppointment: patient.lastAppointment,
+                appointmentStatus: patient.appointmentStatus,
+                isMyPatient: true // Flag to indicate this is doctor's patient
+              };
+            } catch (error) {
+              console.warn(`⚠️ Could not get full details for patient ${patient.id}:`, error.message);
+              return {
+                id: patient.id,
+                name: patient.name,
+                age: 'Unknown',
+                gender: 'Unknown',
+                lastAppointment: patient.lastAppointment,
+                appointmentStatus: patient.appointmentStatus,
+                isMyPatient: true
+              };
+            }
+          })
+        );
+        
+      } else if (user?.roles?.includes('ROLE_PATIENT')) {
+        // Patients see only themselves
+        const patientProfile = await patientService.getMyPatientProfile();
+        patientsData = [patientProfile];
+      } else {
+        patientsData = await patientService.getAll();
+      }
+      
+      setPatients(patientsData);
+      
     } catch (err) {
+      console.error('❌ Error loading patients:', err);
       setError('Failed to load patients');
       enqueueSnackbar('Failed to load patients', { variant: 'error' });
     } finally {
@@ -84,9 +153,28 @@ const PatientsList = () => {
     return genderOption ? genderOption.label : gender;
   };
 
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Unknown';
+    try {
+      return new Date(dateString).toLocaleDateString();
+    } catch (error) {
+      return dateString;
+    }
+  };
+
+  const getAppointmentStatusColor = (status) => {
+    switch (status) {
+      case 'COMPLETED': return '#10b981';
+      case 'SCHEDULED': return '#f59e0b';
+      case 'CANCELLED': return '#ef4444';
+      default: return '#64748b';
+    }
+  };
+
   const filteredPatients = patients.filter(patient =>
     patient.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    getGenderLabel(patient.gender)?.toLowerCase().includes(searchTerm.toLowerCase())
+    getGenderLabel(patient.gender)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    patient.age?.toString().includes(searchTerm)
   );
 
   if (loading) return <LoadingSpinner />;
@@ -106,10 +194,11 @@ const PatientsList = () => {
             color: 'transparent',
           }}
         >
-          Patients
+          {user?.roles?.includes('ROLE_DOCTOR') ? 'My Patients' : 'Patients'}
         </Typography>
-        {/* Allow both ADMIN and DOCTOR to add patients */}
-        {(user?.roles?.includes('ROLE_ADMIN') || user?.roles?.includes('ROLE_DOCTOR')) && (
+        
+        {/* Show different buttons based on role */}
+        {user?.roles?.includes('ROLE_ADMIN') && (
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -129,7 +218,37 @@ const PatientsList = () => {
             Add Patient
           </Button>
         )}
+        
+        {user?.roles?.includes('ROLE_DOCTOR') && (
+          <Typography 
+            variant="body1" 
+            sx={{ 
+              color: '#64748b',
+              fontWeight: 500,
+            }}
+          >
+            {patients.length} patients under my care
+          </Typography>
+        )}
       </Box>
+
+      {/* Role-specific information */}
+      {user?.roles?.includes('ROLE_DOCTOR') && (
+        <Alert 
+          severity="info" 
+          sx={{ 
+            mb: 3,
+            borderRadius: '12px',
+            background: 'rgba(59, 130, 246, 0.1)',
+            border: '1px solid rgba(59, 130, 246, 0.2)',
+          }}
+        >
+          <Typography variant="body2">
+            <strong>Doctor View:</strong> You are seeing only patients who have scheduled appointments with you.
+            {patients.length === 0 && ' No patients have booked appointments with you yet.'}
+          </Typography>
+        </Alert>
+      )}
 
       {/* Search Bar */}
       <Card 
@@ -169,6 +288,7 @@ const PatientsList = () => {
             }}
           >
             {filteredPatients.length} patients found
+            {user?.roles?.includes('ROLE_DOCTOR') && ' (from your appointments)'}
           </Typography>
         </CardContent>
       </Card>
@@ -209,7 +329,9 @@ const PatientsList = () => {
                   left: 0,
                   right: 0,
                   height: '4px',
-                  background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                  background: patient.isMyPatient 
+                    ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' 
+                    : 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
                 },
                 '&:hover': {
                   transform: 'translateY(-8px)',
@@ -221,11 +343,15 @@ const PatientsList = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                   <Box
                     sx={{
-                      background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                      background: patient.isMyPatient
+                        ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                        : 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
                       borderRadius: '14px',
                       p: 2,
                       mr: 2,
-                      boxShadow: '0 4px 14px 0 rgba(139, 92, 246, 0.3)',
+                      boxShadow: patient.isMyPatient
+                        ? '0 4px 14px 0 rgba(16, 185, 129, 0.3)'
+                        : '0 4px 14px 0 rgba(139, 92, 246, 0.3)',
                     }}
                   >
                     <PatientIcon sx={{ color: 'white', fontSize: 28 }} />
@@ -262,13 +388,44 @@ const PatientsList = () => {
                       mb: 0.5,
                     }}
                   >
-                    Age: {patient.age} years
+                    Age: {patient.age || 'Unknown'} years
                   </Typography>
+                  
+                  {/* Show last appointment info for doctor's patients */}
+                  {patient.isMyPatient && patient.lastAppointment && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                      <CalendarIcon sx={{ color: '#64748b', fontSize: '16px' }} />
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          color: '#64748b',
+                          fontWeight: 500,
+                        }}
+                      >
+                        Last: {formatDate(patient.lastAppointment)}
+                      </Typography>
+                    </Box>
+                  )}
+                  
+                  {patient.isMyPatient && patient.appointmentStatus && (
+                    <Chip
+                      label={patient.appointmentStatus}
+                      size="small"
+                      sx={{
+                        background: getAppointmentStatusColor(patient.appointmentStatus),
+                        color: 'white',
+                        fontWeight: '600',
+                        fontSize: '0.7rem',
+                      }}
+                    />
+                  )}
+                  
                   <Typography 
                     variant="body2" 
                     sx={{ 
                       color: '#64748b',
                       fontWeight: 500,
+                      mt: 1,
                     }}
                   >
                     ID: {patient.id}
@@ -340,10 +497,15 @@ const PatientsList = () => {
               fontWeight: 600,
             }}
           >
-            No patients found
+            {user?.roles?.includes('ROLE_DOCTOR') ? 'No Patients Under Your Care' : 'No patients found'}
           </Typography>
           <Typography variant="body2" sx={{ color: '#94a3b8', fontWeight: 500 }}>
-            {searchTerm ? 'Try adjusting your search terms' : 'Get started by adding your first patient'}
+            {searchTerm 
+              ? 'Try adjusting your search terms' 
+              : user?.roles?.includes('ROLE_DOCTOR') 
+                ? 'Patients will appear here once they book appointments with you' 
+                : 'Get started by adding your first patient'
+            }
           </Typography>
         </Card>
       )}
