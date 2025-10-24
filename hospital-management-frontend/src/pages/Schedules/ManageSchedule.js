@@ -35,6 +35,7 @@ import { formatDate, formatTime } from '../../utils/helpers';
 
 const ManageSchedule = () => {
   const [schedules, setSchedules] = useState([]);
+  const [doctorProfile, setDoctorProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -55,16 +56,30 @@ const ManageSchedule = () => {
   });
 
   useEffect(() => {
-    if (user && user.id) {
-      loadSchedules();
+    if (user) {
+      loadDoctorProfileAndSchedules();
     }
   }, [user]);
 
-  const loadSchedules = async () => {
+  // ✅ FIXED: Load doctor profile first, then schedules
+  const loadDoctorProfileAndSchedules = async () => {
     try {
       setLoading(true);
-      const data = await scheduleService.getDoctorOwnSchedules(user.id);
-      setSchedules(Array.isArray(data) ? data : []);
+      
+      // First get the doctor profile to get the correct doctor ID
+      const profile = await scheduleService.getMyDoctorProfile();
+      setDoctorProfile(profile);
+      
+      console.log('👤 Doctor profile loaded:', profile);
+      console.log('🆔 Using doctor ID:', profile.id);
+      
+      // Then load schedules using the correct doctor ID
+      if (profile && profile.id) {
+        const data = await scheduleService.getDoctorOwnSchedules(profile.id);
+        setSchedules(Array.isArray(data) ? data : []);
+      } else {
+        throw new Error('Doctor profile not found');
+      }
     } catch (err) {
       console.error('Error loading schedules:', err);
       setError('Failed to load schedules: ' + (err.message || 'Unknown error'));
@@ -75,9 +90,9 @@ const ManageSchedule = () => {
   };
 
   const handleOpenDialog = (schedule = null) => {
-    if (!user.id) {
-      setError('Cannot create schedule: User ID not available');
-      enqueueSnackbar('Authentication issue. Please log out and log in again.', { variant: 'error' });
+    if (!doctorProfile || !doctorProfile.id) {
+      setError('Cannot create schedule: Doctor profile not available. Please complete your doctor profile first.');
+      enqueueSnackbar('Doctor profile not found', { variant: 'error' });
       return;
     }
 
@@ -164,8 +179,8 @@ const ManageSchedule = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!user.id) {
-      setError('Cannot save schedule: User ID not available');
+    if (!doctorProfile || !doctorProfile.id) {
+      setError('Cannot save schedule: Doctor profile not available');
       return;
     }
 
@@ -179,7 +194,6 @@ const ManageSchedule = () => {
 
     try {
       const scheduleData = {
-        doctorId: user.id,
         availableDate: formData.availableDate,
         startTime: formData.startTime,
         endTime: formData.endTime,
@@ -188,15 +202,17 @@ const ManageSchedule = () => {
       };
 
       if (editingSchedule) {
+        // ✅ FIXED: Use update method directly
         await scheduleService.update(editingSchedule.id, scheduleData);
         enqueueSnackbar('Schedule updated successfully!', { variant: 'success' });
       } else {
-        await scheduleService.createDoctorSchedule(user.id, scheduleData);
+        // ✅ FIXED: Use createMySchedule which automatically gets the correct doctor ID
+        await scheduleService.createMySchedule(scheduleData);
         enqueueSnackbar('Schedule created successfully!', { variant: 'success' });
       }
 
       handleCloseDialog();
-      loadSchedules();
+      loadDoctorProfileAndSchedules(); // Reload with correct doctor ID
     } catch (err) {
       console.error('Error saving schedule:', err);
       const errorMessage = err.response?.data?.message || err.message || 'Failed to save schedule';
@@ -248,7 +264,7 @@ const ManageSchedule = () => {
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => handleOpenDialog()}
-          disabled={!user.id}
+          disabled={!doctorProfile || !doctorProfile.id}
           sx={{
             background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
             borderRadius: '12px',
@@ -267,13 +283,25 @@ const ManageSchedule = () => {
         </Button>
       </Box>
 
-      {!user.id && (
-        <Alert severity="error" sx={{ mb: 3, borderRadius: '12px' }}>
+      {doctorProfile && (
+        <Alert severity="info" sx={{ mb: 3, borderRadius: '12px' }}>
           <Typography variant="body1" fontWeight="bold">
-            Authentication Issue
+            Managing schedule for: {doctorProfile.name}
+            {doctorProfile.specialization && ` (${doctorProfile.specialization})`}
           </Typography>
           <Typography variant="body2">
-            Your user ID is not available. Please log out and log in again.
+            Doctor ID: {doctorProfile.id} | User: {user?.username}
+          </Typography>
+        </Alert>
+      )}
+
+      {!doctorProfile && (
+        <Alert severity="warning" sx={{ mb: 3, borderRadius: '12px' }}>
+          <Typography variant="body1" fontWeight="bold">
+            Doctor Profile Required
+          </Typography>
+          <Typography variant="body2">
+            Please complete your doctor profile before managing schedules.
           </Typography>
         </Alert>
       )}
@@ -297,7 +325,7 @@ const ManageSchedule = () => {
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => handleOpenDialog()}
-            disabled={!user.id}
+            disabled={!doctorProfile || !doctorProfile.id}
             sx={{
               background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
               borderRadius: '12px',
@@ -433,6 +461,11 @@ const ManageSchedule = () => {
           <Typography variant="h6" fontWeight="bold" sx={{ color: 'text.primary' }}>
             {editingSchedule ? 'Edit Time Slot' : 'Add Time Slot'}
           </Typography>
+          {doctorProfile && (
+            <Typography variant="body2" color="textSecondary">
+              For: {doctorProfile.name}
+            </Typography>
+          )}
         </DialogTitle>
         <DialogContent>
           {error && (
@@ -550,7 +583,7 @@ const ManageSchedule = () => {
           <Button
             onClick={handleSubmit}
             variant="contained"
-            disabled={submitting}
+            disabled={submitting || !doctorProfile}
             sx={{
               background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
               borderRadius: '12px',

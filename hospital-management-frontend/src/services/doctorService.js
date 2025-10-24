@@ -4,7 +4,8 @@ export const doctorService = {
   getAll: async () => {
     try {
       console.log('🔄 Fetching all doctors...');
-      const response = await api.get('/doctors');
+      // ✅ FIXED: Changed from '/doctors' to '/api/doctors'
+      const response = await api.get('/api/doctors');
       console.log('✅ Doctors API raw response:', response);
       
       // ✅ FIXED: Handle different response formats
@@ -38,7 +39,8 @@ export const doctorService = {
 
   getById: async (id) => {
     try {
-      const response = await api.get(`/doctors/${id}`);
+      // ✅ FIXED: Changed from '/doctors' to '/api/doctors'
+      const response = await api.get(`/api/doctors/${id}`);
       return response.data;
     } catch (error) {
       console.error(`❌ Error fetching doctor ${id}:`, error);
@@ -48,7 +50,8 @@ export const doctorService = {
 
   create: async (doctorData) => {
     try {
-      const response = await api.post('/doctors', doctorData);
+      // ✅ FIXED: Changed from '/doctors' to '/api/doctors'
+      const response = await api.post('/api/doctors', doctorData);
       return response.data;
     } catch (error) {
       console.error('❌ Error creating doctor:', error);
@@ -58,7 +61,8 @@ export const doctorService = {
 
   update: async (id, doctorData) => {
     try {
-      const response = await api.put(`/doctors/${id}`, doctorData);
+      // ✅ FIXED: Changed from '/doctors' to '/api/doctors'
+      const response = await api.put(`/api/doctors/${id}`, doctorData);
       return response.data;
     } catch (error) {
       console.error(`❌ Error updating doctor ${id}:`, error);
@@ -68,7 +72,8 @@ export const doctorService = {
 
   delete: async (id) => {
     try {
-      await api.delete(`/doctors/${id}`);
+      // ✅ FIXED: Changed from '/doctors' to '/api/doctors'
+      await api.delete(`/api/doctors/${id}`);
     } catch (error) {
       console.error(`❌ Error deleting doctor ${id}:`, error);
       throw error;
@@ -79,7 +84,7 @@ export const doctorService = {
   getMyDoctorProfile: async () => {
     try {
       console.log('🔄 Getting current doctor profile...');
-      const response = await api.get('/api/doctor-profile/me');
+      const response = await api.get('/api/doctors/my-profile');
       console.log('✅ Doctor profile response:', response.data);
       return response.data;
     } catch (error) {
@@ -91,7 +96,7 @@ export const doctorService = {
   // ✅ ADDED: Check if doctor profile exists
   checkDoctorProfile: async () => {
     try {
-      const response = await api.get('/api/doctor-profile/check');
+      const response = await api.get('/api/doctors/check');
       return response.data;
     } catch (error) {
       console.error('Error checking doctor profile:', error);
@@ -102,7 +107,7 @@ export const doctorService = {
   // ✅ ADDED: Create doctor profile
   createDoctorProfile: async (profileData) => {
     try {
-      const response = await api.post('/api/doctor-profile/create', profileData);
+      const response = await api.post('/api/doctors/create', profileData);
       return response.data;
     } catch (error) {
       console.error('❌ Error creating doctor profile:', error);

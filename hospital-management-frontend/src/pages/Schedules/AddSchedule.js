@@ -22,6 +22,7 @@ const AddSchedule = () => {
   const { user } = useAuth();
   const { enqueueSnackbar } = useSnackbar();
   const [hasDoctorProfile, setHasDoctorProfile] = useState(false);
+  const [doctorProfile, setDoctorProfile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
@@ -32,8 +33,28 @@ const AddSchedule = () => {
     maxPatients: 1
   });
 
+  // Check if doctor profile exists
+  useEffect(() => {
+    const checkDoctorProfile = async () => {
+      if (user && user.hasRole('DOCTOR')) {
+        try {
+          const profile = await scheduleService.getMyDoctorProfile();
+          setDoctorProfile(profile);
+          setHasDoctorProfile(true);
+          console.log('✅ Doctor profile found:', profile);
+        } catch (error) {
+          console.log('⚠️ No doctor profile found, showing setup form');
+          setHasDoctorProfile(false);
+        }
+      }
+    };
+
+    checkDoctorProfile();
+  }, [user]);
+
   const handleProfileCreated = (profile) => {
     setHasDoctorProfile(true);
+    setDoctorProfile(profile);
     enqueueSnackbar('Doctor profile created successfully!', { variant: 'success' });
   };
 
@@ -42,7 +63,10 @@ const AddSchedule = () => {
     try {
       setLoading(true);
       setError('');
-      await scheduleService.createDoctorSchedule(user.id, formData);
+      
+      // ✅ FIXED: Use the new createMySchedule method that automatically gets the correct doctor ID
+      await scheduleService.createMySchedule(formData);
+      
       enqueueSnackbar('Schedule added successfully!', { variant: 'success' });
       setFormData({
         availableDate: '',
@@ -53,8 +77,8 @@ const AddSchedule = () => {
       });
     } catch (error) {
       console.error('Error adding schedule:', error);
-      setError('Error adding schedule: ' + error.message);
-      enqueueSnackbar('Error adding schedule', { variant: 'error' });
+      setError('Error adding schedule: ' + (error.message || 'Unknown error'));
+      enqueueSnackbar('Error adding schedule: ' + (error.message || 'Unknown error'), { variant: 'error' });
     } finally {
       setLoading(false);
     }
@@ -97,6 +121,18 @@ const AddSchedule = () => {
           >
             Add Schedule
           </Typography>
+
+          {doctorProfile && (
+            <Alert severity="info" sx={{ mb: 3, borderRadius: '12px' }}>
+              <Typography variant="body2" fontWeight="bold">
+                Creating schedule for: {doctorProfile.name} 
+                {doctorProfile.specialization && ` (${doctorProfile.specialization})`}
+              </Typography>
+              <Typography variant="body2">
+                Doctor ID: {doctorProfile.id}
+              </Typography>
+            </Alert>
+          )}
 
           {error && (
             <Alert severity="error" sx={{ mb: 3, borderRadius: '12px' }}>

@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,13 +18,31 @@ import com.hms.entity.Doctor;
 import com.hms.service.DoctorService;
 
 @RestController
-@RequestMapping("/doctors")
+@RequestMapping("/api/doctors") // ✅ FIXED: Added /api
+@CrossOrigin(origins = "*")
 public class DoctorController {
 
     private final DoctorService doctorService;
 
     public DoctorController(DoctorService doctorService) {
         this.doctorService = doctorService;
+    }
+
+    // ✅ ADD THIS: Get current doctor's profile
+    @GetMapping("/my-profile")
+    public ResponseEntity<?> getMyDoctorProfile(Authentication authentication) {
+        try {
+            String username = authentication.getName();
+            System.out.println("🔍 Getting doctor profile for: " + username);
+            
+            Doctor doctor = doctorService.getCurrentDoctor(username);
+            System.out.println("✅ Found doctor: " + doctor.getId() + " for user: " + username);
+            
+            return ResponseEntity.ok(doctor);
+        } catch (RuntimeException e) {
+            System.out.println("❌ Error getting doctor profile: " + e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     @PostMapping

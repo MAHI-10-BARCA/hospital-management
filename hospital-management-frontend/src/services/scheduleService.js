@@ -1,7 +1,7 @@
 import api from './api';
 
 export const scheduleService = {
-  // Doctor creates their own schedule
+  // Doctor creates their own schedule - ✅ FIXED: Get doctor ID first
   createDoctorSchedule: async (doctorId, scheduleData) => {
     try {
       console.log('🔄 Creating schedule for doctor:', doctorId);
@@ -26,6 +26,42 @@ export const scheduleService = {
     } catch (error) {
       console.error('❌ Error creating schedule:', error);
       console.error('❌ Error details:', error.response?.data);
+      throw error;
+    }
+  },
+
+  // ✅ ADDED: Create schedule for current authenticated doctor
+  createMySchedule: async (scheduleData) => {
+    try {
+      console.log('🔄 Creating schedule for current doctor...');
+      
+      // First get the current doctor profile to get the correct doctor ID
+      const doctorProfile = await scheduleService.getMyDoctorProfile();
+      
+      if (!doctorProfile || !doctorProfile.id) {
+        throw new Error('Doctor profile not found. Please complete your doctor profile first.');
+      }
+      
+      console.log('👤 Current doctor profile:', doctorProfile);
+      console.log('🆔 Using doctor ID:', doctorProfile.id);
+      
+      // Now create schedule with the correct doctor ID
+      return await scheduleService.createDoctorSchedule(doctorProfile.id, scheduleData);
+    } catch (error) {
+      console.error('❌ Error creating my schedule:', error);
+      throw error;
+    }
+  },
+
+  // ✅ ADDED: Get current doctor profile
+  getMyDoctorProfile: async () => {
+    try {
+      console.log('🔄 Getting current doctor profile...');
+      const response = await api.get('/api/doctors/my-profile');
+      console.log('✅ Current doctor profile:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error getting doctor profile:', error);
       throw error;
     }
   },
@@ -104,6 +140,29 @@ export const scheduleService = {
     }
   },
 
+  // ✅ ADDED: Get current doctor's schedules
+  getMySchedules: async () => {
+    try {
+      console.log('🔄 Getting schedules for current doctor...');
+      
+      // First get the current doctor profile
+      const doctorProfile = await scheduleService.getMyDoctorProfile();
+      
+      if (!doctorProfile || !doctorProfile.id) {
+        throw new Error('Doctor profile not found');
+      }
+      
+      console.log('👤 Current doctor profile:', doctorProfile);
+      console.log('🆔 Doctor ID for schedules:', doctorProfile.id);
+      
+      // Then get schedules using the doctor ID
+      return await scheduleService.getDoctorOwnSchedules(doctorProfile.id);
+    } catch (error) {
+      console.error('❌ Error getting my schedules:', error);
+      throw error;
+    }
+  },
+
   // Update schedule
   update: async (id, scheduleData) => {
     try {
@@ -137,31 +196,6 @@ export const scheduleService = {
       await api.delete(`/api/schedules/${id}`);
     } catch (error) {
       console.error('❌ Error deleting schedule:', error);
-      throw error;
-    }
-  },
-
-  // Get schedules for current doctor
-  getMySchedules: async () => {
-    try {
-      console.log('🔄 Getting schedules for current doctor...');
-      
-      // First get the current doctor profile
-      const doctorProfile = await import('./doctorService').then(module => 
-        module.default.getMyDoctorProfile()
-      );
-      
-      if (!doctorProfile || !doctorProfile.id) {
-        throw new Error('Doctor profile not found');
-      }
-      
-      console.log('👤 Current doctor profile:', doctorProfile);
-      console.log('🆔 Doctor ID for schedules:', doctorProfile.id);
-      
-      // Then get schedules using the doctor ID
-      return await scheduleService.getDoctorOwnSchedules(doctorProfile.id);
-    } catch (error) {
-      console.error('❌ Error getting my schedules:', error);
       throw error;
     }
   },

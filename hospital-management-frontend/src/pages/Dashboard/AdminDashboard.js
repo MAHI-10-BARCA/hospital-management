@@ -289,70 +289,75 @@ const AdminDashboard = ({ user, stats, recentAppointments }) => {
         </Grid>
       </Paper>
 
-      {/* Recent Activity Section */}
-      {recentAppointments.length > 0 && (
-        <Paper sx={{ 
-          p: 4, 
-          mt: 4,
-          background: 'rgba(255, 255, 255, 0.6)',
-          backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(255, 255, 255, 0.3)',
-          borderRadius: '24px',
-        }}>
-          <Typography 
-            variant="h5" 
-            gutterBottom 
-            fontWeight="bold"
-            sx={{
-              background: 'linear-gradient(135deg, #1e293b 0%, #475569 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              color: 'transparent',
-            }}
-          >
-            Recent Appointments
-          </Typography>
-          <Box sx={{ mt: 2 }}>
-            {recentAppointments.map((appointment, index) => (
-              <Box
-                key={index}
-                sx={{
-                  p: 2,
-                  mb: 1,
-                  borderRadius: '12px',
-                  background: 'rgba(255, 255, 255, 0.5)',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <Box>
-                  <Typography fontWeight="500">
-                    {appointment.patientName} with Dr. {appointment.doctorName}
-                  </Typography>
-                  <Typography variant="body2" color="#64748b">
-                    {appointment.appointmentDate} • {appointment.status}
-                  </Typography>
-                </Box>
-                <Chip
-                  label={appointment.status}
-                  size="small"
-                  sx={{
-                    background: appointment.status === 'COMPLETED' 
-                      ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-                      : appointment.status === 'SCHEDULED'
-                      ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
-                      : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                    color: 'white',
-                    fontWeight: '600',
-                  }}
-                />
-              </Box>
-            ))}
+
+{/* Recent Activity Section */}
+{recentAppointments.length > 0 && (
+  <Paper sx={{ 
+    p: 4, 
+    mt: 4,
+    background: 'rgba(255, 255, 255, 0.6)',
+    backdropFilter: 'blur(20px)',
+    border: '1px solid rgba(255, 255, 255, 0.3)',
+    borderRadius: '24px',
+  }}>
+    <Typography 
+      variant="h5" 
+      gutterBottom 
+      fontWeight="bold"
+      sx={{
+        background: 'linear-gradient(135deg, #1e293b 0%, #475569 100%)',
+        backgroundClip: 'text',
+        WebkitBackgroundClip: 'text',
+        color: 'transparent',
+      }}
+    >
+      Recent Appointments
+    </Typography>
+    <Box sx={{ mt: 2 }}>
+      {recentAppointments.map((appointment, index) => (
+        <Box
+          key={index}
+          sx={{
+            p: 2,
+            mb: 1,
+            borderRadius: '12px',
+            background: 'rgba(255, 255, 255, 0.5)',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <Box>
+            <Typography fontWeight="500">
+              {/* ✅ FIXED: Handle different appointment data structures */}
+              {appointment.patientName || appointment.patient?.name || 'Patient'} 
+              {' with Dr. '} 
+              {appointment.doctorName || appointment.doctor?.name || 'Doctor'}
+            </Typography>
+            <Typography variant="body2" color="#64748b">
+              {appointment.appointmentDate || appointment.availableDate} • {appointment.status}
+            </Typography>
           </Box>
-        </Paper>
-      )}
+          <Chip
+            label={appointment.status}
+            size="small"
+            sx={{
+              background: appointment.status === 'COMPLETED' 
+                ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                : appointment.status === 'SCHEDULED' || appointment.status === 'PENDING'
+                ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+                : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+              color: 'white',
+              fontWeight: '600',
+            }}
+          />
+        </Box>
+      ))}
+    </Box>
+  </Paper>
+)}
+      
     </Box>
   );
 };
