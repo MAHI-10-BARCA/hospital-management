@@ -8,7 +8,7 @@ import { appointmentService } from '../../services/appointmentService';
 import { userService } from '../../services/userService';
 import { doctorService } from '../../services/doctorService';
 import { patientService } from '../../services/patientService';
-import { Box, CircularProgress, Alert,Button } from '@mui/material';
+import { Box, CircularProgress, Alert, Button } from '@mui/material';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -25,17 +25,42 @@ const Dashboard = () => {
     try {
       setLoading(true);
       
-      // Load all necessary data in parallel
-      const [appointments, doctors, patients] = await Promise.all([
-        appointmentService.getAll(),
-        doctorService.getAll(),
-        patientService.getAll()
-      ]);
+      // ✅ FIXED: Load role-specific data
+      let appointments = [];
+      let doctors = [];
+      let patients = [];
+      
+      if (user?.roles?.includes('ROLE_ADMIN')) {
+        // Admin sees all data
+        [appointments, doctors, patients] = await Promise.all([
+          appointmentService.getAll(),
+          doctorService.getAll(),
+          patientService.getAll()
+        ]);
+      } else if (user?.roles?.includes('ROLE_DOCTOR')) {
+        // Doctor sees only their data
+        const doctorProfile = await doctorService.getMyDoctorProfile();
+        appointments = await appointmentService.getByDoctor(doctorProfile.id);
+        patients = await getDoctorPatients(doctorProfile.id); // ✅ NEW: Get doctor's patients
+        doctors = [doctorProfile]; // Doctor only sees themselves
+      } else if (user?.roles?.includes('ROLE_PATIENT')) {
+        // Patient sees only their data
+        const patientProfile = await patientService.getMyPatientProfile();
+        appointments = await appointmentService.getByPatient(patientProfile.id);
+        doctors = await doctorService.getAll(); // Patients can see all doctors
+        patients = [patientProfile]; // Patient only sees themselves
+      } else {
+        // Default fallback
+        appointments = await appointmentService.getAll();
+        doctors = await doctorService.getAll();
+        patients = await patientService.getAll();
+      }
       
       console.log('📊 Dashboard data loaded:', {
         appointments: appointments.length,
         doctors: doctors.length,
-        patients: patients.length
+        patients: patients.length,
+        userRole: user?.roles?.[0]
       });
 
       // Load user stats based on role
@@ -60,27 +85,49 @@ const Dashboard = () => {
     }
   };
 
+  // ✅ ADDED: Get doctor's patients
+  const getDoctorPatients = async (doctorId) => {
+    try {
+      // Get appointments for this doctor to find their patients
+      const appointments = await appointmentService.getByDoctor(doctorId);
+      
+      // Extract unique patients from appointments
+      const uniquePatients = [];
+      const patientIds = new Set();
+      
+      appointments.forEach(apt => {
+        if (apt.patientId && !patientIds.has(apt.patientId)) {
+          patientIds.add(apt.patientId);
+          uniquePatients.push({
+            id: apt.patientId,
+            name: apt.patientName || 'Unknown Patient'
+          });
+        }
+      });
+      
+      console.log(`👨‍⚕️ Doctor ${doctorId} has ${uniquePatients.length} unique patients`);
+      return uniquePatients;
+    } catch (error) {
+      console.error('Error getting doctor patients:', error);
+      return [];
+    }
+  };
+
   const loadAdminStats = (appointments, doctors, patients) => {
     const today = new Date().toISOString().split('T')[0];
     
     return {
-      // ✅ FIXED: Use actual counts from services
       totalPatients: patients.length,
       totalDoctors: doctors.length,
-      
-      // ✅ FIXED: Calculate appointments properly
       appointmentsToday: appointments.filter(apt => {
         const appointmentDate = apt.appointmentDate || apt.availableDate;
         return appointmentDate === today;
       }).length,
-      
       monthlyGrowth: calculateMonthlyGrowth(appointments),
-      
       totalAppointments: appointments.length,
       completedAppointments: appointments.filter(apt => 
-        apt.status === 'COMPLETED' || apt.status === 'COMPLETED'
+        apt.status === 'COMPLETED'
       ).length,
-      
       upcomingAppointments: appointments.filter(apt => 
         apt.status === 'SCHEDULED' || apt.status === 'PENDING'
       ).length,
@@ -90,88 +137,48 @@ const Dashboard = () => {
   const loadDoctorStats = (appointments, doctors, patients) => {
     const today = new Date().toISOString().split('T')[0];
     
-    // ✅ FIXED: Get current doctor's appointments properly
-    const doctorAppointments = appointments.filter(apt => {
-      // Try different ways to match doctor
-      return apt.doctorId === user?.doctorId || 
-             apt.doctor?.id === user?.doctorId ||
-             apt.doctorName === user?.username ||
-             (apt.doctor && apt.doctor.name === user?.username);
-    });
-    
-    console.log('👨‍⚕️ Doctor appointments:', {
+    console.log('👨‍⚕️ Doctor stats calculation:', {
       totalAppointments: appointments.length,
-      doctorAppointments: doctorAppointments.length,
-      doctorId: user?.doctorId,
-      username: user?.username
+      totalPatients: patients.length,
+      today: today
     });
-    
-    // ✅ FIXED: Get unique patients from doctor's appointments
-    const uniquePatientIds = [...new Set(doctorAppointments
-      .filter(apt => apt.patientId || apt.patient?.id)
-      .map(apt => apt.patientId || apt.patient?.id)
-    )];
     
     return {
-      todaysAppointments: doctorAppointments.filter(apt => {
+      todaysAppointments: appointments.filter(apt => {
         const appointmentDate = apt.appointmentDate || apt.availableDate;
         return appointmentDate === today;
       }).length,
-      
-      upcomingAppointments: doctorAppointments.filter(apt => 
+      upcomingAppointments: appointments.filter(apt => 
         apt.status === 'SCHEDULED' || apt.status === 'PENDING'
       ).length,
-      
-      completedAppointments: doctorAppointments.filter(apt => 
+      completedAppointments: appointments.filter(apt => 
         apt.status === 'COMPLETED'
       ).length,
-      
-      // ✅ FIXED: Use actual unique patient count
-      totalPatients: uniquePatientIds.length,
-      totalAppointments: doctorAppointments.length,
+      totalPatients: patients.length,
+      totalAppointments: appointments.length,
     };
   };
 
   const loadPatientStats = (appointments, doctors, patients) => {
     const today = new Date().toISOString().split('T')[0];
     
-    // ✅ FIXED: Get current patient's appointments properly
-    const patientAppointments = appointments.filter(apt => {
-      // Try different ways to match patient
-      return apt.patientId === user?.patientId || 
-             apt.patient?.id === user?.patientId ||
-             apt.patientName === user?.username ||
-             (apt.patient && apt.patient.name === user?.username);
-    });
-    
-    console.log('👤 Patient appointments:', {
-      totalAppointments: appointments.length,
-      patientAppointments: patientAppointments.length,
-      patientId: user?.patientId,
-      username: user?.username
-    });
-    
     return {
-      upcomingAppointments: patientAppointments.filter(apt => 
+      upcomingAppointments: appointments.filter(apt => 
         apt.status === 'SCHEDULED' || apt.status === 'PENDING'
       ).length,
-      
-      completedAppointments: patientAppointments.filter(apt => 
+      completedAppointments: appointments.filter(apt => 
         apt.status === 'COMPLETED'
       ).length,
-      
-      todaysAppointments: patientAppointments.filter(apt => {
+      todaysAppointments: appointments.filter(apt => {
         const appointmentDate = apt.appointmentDate || apt.availableDate;
         return appointmentDate === today;
       }).length,
-      
-      totalAppointments: patientAppointments.length,
+      totalAppointments: appointments.length,
     };
   };
 
-  // ✅ ADDED: Calculate monthly growth (placeholder implementation)
   const calculateMonthlyGrowth = (appointments) => {
-    // Simple growth calculation based on last month vs current month
+    // Simple growth calculation
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
     
@@ -187,8 +194,7 @@ const Dashboard = () => {
       return aptDate.getMonth() === lastMonth && aptDate.getFullYear() === lastMonthYear;
     }).length;
     
-    if (lastMonthAppointments === 0) return 100; // 100% growth if no appointments last month
-    
+    if (lastMonthAppointments === 0) return 100;
     return Math.round(((currentMonthAppointments - lastMonthAppointments) / lastMonthAppointments) * 100);
   };
 
