@@ -1,0 +1,709 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  Button,
+  Chip,
+  IconButton,
+  TextField,
+  Alert,
+  Grid,
+  Menu,
+  MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControl,
+  InputLabel,
+  Select,
+  alpha,
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  Delete as DeleteIcon,
+  MoreVert as MoreIcon,
+  CheckCircle as AcceptIcon,
+  Cancel as RejectIcon,
+  Schedule as HoldIcon,
+  CalendarToday as CalendarIcon,
+  AccessTime as TimeIcon,
+  Person as PersonIcon,
+  LocalHospital as DoctorIcon,
+  Edit as EditIcon,
+  Description as DescriptionIcon,
+  Search as SearchIcon,
+} from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
+import { useSnackbar } from 'notistack';
+import { appointmentService } from '../../services/appointmentService';
+import { prescriptionService } from '../../services/prescriptionService';
+import { useAuth } from '../../contexts/AuthContext';
+import { hasPermission } from '../../utils/helpers';
+import LoadingSpinner from '../../components/Common/LoadingSpinner';
+import ConfirmDialog from '../../components/Common/ConfirmDialog';
+import PrescriptionForm from '../Prescription/PrescriptionForm';
+import PrescriptionView from '../Prescription/PrescriptionView';
+import { 
+  formatDate, 
+  formatTime, 
+  getStatusColor, 
+  getStatusLabel,
+  mapAppointmentData,
+  APPOINTMENT_STATUS 
+} from '../../utils/helpers';
+
+const AppointmentsList = () => {
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [prescriptionDialogOpen, setPrescriptionDialogOpen] = useState(false);
+  const [prescriptionViewOpen, setPrescriptionViewOpen] = useState(false);
+  const [appointmentToDelete, setAppointmentToDelete] = useState(null);
+  const [appointmentForStatus, setAppointmentForStatus] = useState(null);
+  const [appointmentForEdit, setAppointmentForEdit] = useState(null);
+  const [selectedAppointmentForPrescription, setSelectedAppointmentForPrescription] = useState(null);
+  const [selectedAppointmentForView, setSelectedAppointmentForView] = useState(null);
+  const [existingPrescription, setExistingPrescription] = useState(null);
+  const [prescriptionToView, setPrescriptionToView] = useState(null);
+  const [newStatus, setNewStatus] = useState('');
+  const [editReason, setEditReason] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [menuAnchor, setMenuAnchor] = useState(null);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+
+  const navigate = useNavigate();
+  const { enqueueSnackbar } = useSnackbar();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    loadAppointments();
+  }, []);
+
+  const loadAppointments = async () => {
+    try {
+      setLoading(true);
+      const data = await appointmentService.getAll();
+      console.log('📅 Raw appointments data:', data);
+      
+      const mappedAppointments = Array.isArray(data) ? data.map(mapAppointmentData) : [];
+      console.log('📅 Mapped appointments:', mappedAppointments);
+      
+      setAppointments(mappedAppointments);
+    } catch (err) {
+      console.error('❌ Error loading appointments:', err);
+      setError('Failed to load appointments');
+      enqueueSnackbar('Failed to load appointments', { variant: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePatientViewPrescription = async (appointment) => {
+    try {
+      setSelectedAppointmentForView(appointment);
+      console.log('👤 Patient viewing prescription for appointment:', appointment.id);
+      
+      enqueueSnackbar('Loading prescription...', { variant: 'info', autoHideDuration: 2000 });
+      
+      const prescription = await prescriptionService.getByAppointmentForPatient(appointment.id);
+      
+      if (prescription) {
+        setPrescriptionToView(prescription);
+        setPrescriptionViewOpen(true);
+        console.log('📄 Prescription found and opened for viewing:', prescription);
+        enqueueSnackbar('Prescription loaded successfully', { variant: 'success' });
+      } else {
+        console.log('❌ No prescription found for this appointment');
+        enqueueSnackbar('No prescription found for this completed appointment', { variant: 'info' });
+      }
+    } catch (error) {
+      console.error('❌ Error fetching prescription:', error);
+      if (error.response?.status === 403) {
+        enqueueSnackbar('Prescription not available yet or you are not authorized to view it', { variant: 'warning' });
+      } else if (error.response?.status === 404) {
+        enqueueSnackbar('No prescription found for this appointment', { variant: 'info' });
+      } else {
+        enqueueSnackbar('Failed to load prescription. Please try again.', { variant: 'error' });
+      }
+    }
+  };
+
+  const handlePrescriptionClick = async (appointment) => {
+    try {
+      setSelectedAppointmentForPrescription(appointment);
+      
+      const prescription = await prescriptionService.getByAppointment(appointment.id);
+      setExistingPrescription(prescription);
+      setPrescriptionDialogOpen(true);
+    } catch (error) {
+      console.log('No existing prescription found, creating new one');
+      setExistingPrescription(null);
+      setPrescriptionDialogOpen(true);
+    }
+  };
+
+  const handleMenuOpen = (event, appointment) => {
+    setMenuAnchor(event.currentTarget);
+    setSelectedAppointment(appointment);
+  };
+
+  const handleMenuClose = () => {
+    setMenuAnchor(null);
+    setSelectedAppointment(null);
+  };
+
+  const handleStatusUpdate = async () => {
+    if (!appointmentForStatus || !newStatus) return;
+
+    try {
+      await appointmentService.updateStatus(appointmentForStatus.id, newStatus);
+      enqueueSnackbar(`Appointment status updated to ${getStatusLabel(newStatus)}`, { variant: 'success' });
+      setStatusDialogOpen(false);
+      setAppointmentForStatus(null);
+      setNewStatus('');
+      loadAppointments();
+    } catch (err) {
+      console.error('❌ Error updating status:', err);
+      enqueueSnackbar('Failed to update appointment status', { variant: 'error' });
+    }
+  };
+
+  const handleEditSave = async () => {
+    if (!appointmentForEdit) return;
+
+    try {
+      await appointmentService.update(appointmentForEdit.id, {
+        reason: editReason
+      });
+      enqueueSnackbar('Appointment updated successfully', { variant: 'success' });
+      setEditDialogOpen(false);
+      setAppointmentForEdit(null);
+      setEditReason('');
+      loadAppointments();
+    } catch (err) {
+      console.error('❌ Error updating appointment:', err);
+      enqueueSnackbar('Failed to update appointment', { variant: 'error' });
+    }
+  };
+
+  const handleDeleteClick = (appointment) => {
+    setAppointmentToDelete(appointment);
+    setDeleteDialogOpen(true);
+    handleMenuClose();
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      await appointmentService.delete(appointmentToDelete.id);
+      setAppointments(appointments.filter(a => a.id !== appointmentToDelete.id));
+      enqueueSnackbar('Appointment deleted successfully', { variant: 'success' });
+    } catch (err) {
+      enqueueSnackbar('Failed to delete appointment', { variant: 'error' });
+    } finally {
+      setDeleteDialogOpen(false);
+      setAppointmentToDelete(null);
+    }
+  };
+
+  const handleStatusClick = (appointment) => {
+    setAppointmentForStatus(appointment);
+    setNewStatus(appointment.status);
+    setStatusDialogOpen(true);
+    handleMenuClose();
+  };
+
+  const handleEditClick = (appointment) => {
+    setAppointmentForEdit(appointment);
+    setEditReason(appointment.reason || '');
+    setEditDialogOpen(true);
+    handleMenuClose();
+  };
+
+  const getStatusOptions = () => {
+    const baseOptions = [
+      APPOINTMENT_STATUS.SCHEDULED,
+      APPOINTMENT_STATUS.CONFIRMED,
+      APPOINTMENT_STATUS.IN_PROGRESS,
+      APPOINTMENT_STATUS.COMPLETED,
+      APPOINTMENT_STATUS.CANCELLED
+    ];
+    
+    if (hasPermission(user, 'manage_appointments')) {
+      return baseOptions;
+    } else if (hasPermission(user, 'manage_schedules')) {
+      return [APPOINTMENT_STATUS.CONFIRMED, APPOINTMENT_STATUS.IN_PROGRESS, APPOINTMENT_STATUS.COMPLETED, APPOINTMENT_STATUS.CANCELLED];
+    }
+    
+    return [];
+  };
+
+  const filteredAppointments = appointments.filter(appointment => {
+    const matchesSearch = 
+      appointment.patientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      appointment.doctorName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      appointment.reason?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || appointment.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
+
+  const getStatusChip = (status) => {
+    return (
+      <Chip
+        label={getStatusLabel(status)}
+        color={getStatusColor(status)}
+        size="small"
+        variant="filled"
+        sx={{ 
+          fontWeight: 'bold', 
+          minWidth: 100,
+          background: `linear-gradient(135deg, ${getStatusColor(status)}.main 0%, ${getStatusColor(status)}.dark 100%)`,
+        }}
+      />
+    );
+  };
+
+  const isPatient = user?.roles?.includes('ROLE_PATIENT');
+  const isDoctor = user?.roles?.includes('ROLE_DOCTOR');
+
+  if (loading) return <LoadingSpinner />;
+
+  return (
+    <Box sx={{ p: 3 }}>
+      {/* Header with Glass Effect */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+        <Typography 
+          variant="h4" 
+          component="h1" 
+          fontWeight="bold"
+          sx={{
+            background: 'linear-gradient(135deg, #1e293b 0%, #475569 100%)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            color: 'transparent',
+          }}
+        >
+          Appointments
+        </Typography>
+        {/* REMOVED Book Appointment Button */}
+      </Box>
+
+      {/* Search and Filter Card with Glass Morphism */}
+      <Card 
+        sx={{ 
+          mb: 4, 
+          borderRadius: '24px',
+          background: 'rgba(255, 255, 255, 0.7)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.3)',
+          boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
+        }}
+      >
+        <CardContent sx={{ p: 4 }}>
+          <Grid container spacing={3} alignItems="center">
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                variant="outlined"
+                placeholder="Search appointments by patient, doctor, or reason..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <SearchIcon sx={{ color: '#64748b', mr: 1 }} />
+                  ),
+                  sx: {
+                    borderRadius: '12px',
+                    background: 'rgba(255, 255, 255, 0.8)',
+                    backdropFilter: 'blur(10px)',
+                  }
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth>
+                <InputLabel>Filter by Status</InputLabel>
+                <Select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  label="Filter by Status"
+                  sx={{
+                    borderRadius: '12px',
+                    background: 'rgba(255, 255, 255, 0.8)',
+                    backdropFilter: 'blur(10px)',
+                  }}
+                >
+                  <MenuItem value="all">All Statuses</MenuItem>
+                  <MenuItem value={APPOINTMENT_STATUS.SCHEDULED}>Scheduled</MenuItem>
+                  <MenuItem value={APPOINTMENT_STATUS.CONFIRMED}>Confirmed</MenuItem>
+                  <MenuItem value={APPOINTMENT_STATUS.IN_PROGRESS}>In Progress</MenuItem>
+                  <MenuItem value={APPOINTMENT_STATUS.COMPLETED}>Completed</MenuItem>
+                  <MenuItem value={APPOINTMENT_STATUS.CANCELLED}>Cancelled</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={2}>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  color: '#64748b', 
+                  textAlign: 'center',
+                  fontWeight: 500,
+                }}
+              >
+                {filteredAppointments.length} appointments
+              </Typography>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
+
+      {error && (
+        <Alert 
+          severity="error" 
+          sx={{ 
+            mb: 3, 
+            borderRadius: '12px',
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.2)',
+          }}
+        >
+          {error}
+        </Alert>
+      )}
+
+      <Grid container spacing={3}>
+        {filteredAppointments.map((appointment) => (
+          <Grid item xs={12} key={appointment.id}>
+            <Card
+              sx={{
+                transition: 'all 0.3s ease',
+                background: 'rgba(255, 255, 255, 0.7)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                borderRadius: '20px',
+                boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '4px',
+                  background: `linear-gradient(135deg, ${getStatusColor(appointment.status)}.main 0%, ${getStatusColor(appointment.status)}.dark 100%)`,
+                },
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: '0 12px 40px 0 rgba(31, 38, 135, 0.15)',
+                },
+              }}
+            >
+              <CardContent sx={{ p: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Box sx={{ flexGrow: 1 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                      <Box>
+                        <Typography 
+                          variant="h6" 
+                          component="h2" 
+                          fontWeight="bold" 
+                          sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: 1,
+                            color: '#1e293b'
+                          }}
+                        >
+                          <PersonIcon sx={{ color: '#6366f1' }} />
+                          {appointment.patientName || 'Unknown Patient'}
+                        </Typography>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: 1, 
+                            mt: 0.5,
+                            color: '#64748b'
+                          }}
+                        >
+                          <DoctorIcon fontSize="small" sx={{ color: '#10b981' }} />
+                          with Dr. {appointment.doctorName || 'Unknown Doctor'}
+                          {appointment.doctorSpecialization && ` • ${appointment.doctorSpecialization}`}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {getStatusChip(appointment.status)}
+                        {(hasPermission(user, 'manage_appointments') || hasPermission(user, 'manage_schedules')) && (
+                          <IconButton
+                            size="small"
+                            onClick={(e) => handleMenuOpen(e, appointment)}
+                            sx={{
+                              background: 'rgba(99, 102, 241, 0.1)',
+                              border: '1px solid rgba(99, 102, 241, 0.2)',
+                              borderRadius: '8px',
+                              '&:hover': {
+                                background: 'rgba(99, 102, 241, 0.15)',
+                              },
+                            }}
+                          >
+                            <MoreIcon />
+                          </IconButton>
+                        )}
+                      </Box>
+                    </Box>
+
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} md={6}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                          <CalendarIcon sx={{ color: '#64748b', fontSize: '18px' }} />
+                          <Typography variant="body2" sx={{ color: '#475569', fontWeight: 500 }}>
+                            <strong style={{ color: '#1e293b' }}>Date:</strong> {formatDate(appointment.appointmentDate)}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                          <TimeIcon sx={{ color: '#64748b', fontSize: '18px' }} />
+                          <Typography variant="body2" sx={{ color: '#475569', fontWeight: 500 }}>
+                            <strong style={{ color: '#1e293b' }}>Time:</strong> {formatTime(appointment.startTime)} - {formatTime(appointment.endTime)}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="body2" sx={{ mb: 1, color: '#475569', fontWeight: 500 }}>
+                          <strong style={{ color: '#1e293b' }}>Reason:</strong> {appointment.reason || 'No reason provided'}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 500 }}>
+                          <strong>Created:</strong> {appointment.createdDate ? new Date(appointment.createdDate).toLocaleString() : 'Unknown'}
+                        </Typography>
+                      </Grid>
+                    </Grid>
+
+                    {isPatient && appointment.status === 'COMPLETED' && (
+                      <Box sx={{ mt: 2 }}>
+                        <Button
+                          variant="outlined"
+                          startIcon={<DescriptionIcon />}
+                          onClick={() => handlePatientViewPrescription(appointment)}
+                          size="small"
+                          sx={{
+                            border: '2px solid rgba(99, 102, 241, 0.2)',
+                            color: '#6366f1',
+                            background: 'rgba(255, 255, 255, 0.5)',
+                            backdropFilter: 'blur(10px)',
+                            borderRadius: '8px',
+                            fontWeight: 600,
+                            '&:hover': {
+                              border: '2px solid rgba(99, 102, 241, 0.4)',
+                              background: 'rgba(99, 102, 241, 0.08)',
+                            },
+                          }}
+                        >
+                          View Prescription
+                        </Button>
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+
+      {filteredAppointments.length === 0 && !loading && (
+        <Card 
+          sx={{ 
+            textAlign: 'center', 
+            p: 6, 
+            borderRadius: '24px',
+            background: 'rgba(255, 255, 255, 0.7)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+          }}
+        >
+          <CalendarIcon sx={{ fontSize: 64, color: '#cbd5e1', mb: 2, opacity: 0.7 }} />
+          <Typography 
+            variant="h6" 
+            sx={{ 
+              color: '#64748b', 
+              mb: 1,
+              fontWeight: 600,
+            }}
+          >
+            No appointments found
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#94a3b8', fontWeight: 500 }}>
+            {searchTerm || statusFilter !== 'all' 
+              ? 'Try adjusting your search terms or filters' 
+              : 'No appointments have been scheduled yet'
+            }
+          </Typography>
+        </Card>
+      )}
+
+      {/* Menu with role-based options */}
+      <Menu
+        anchorEl={menuAnchor}
+        open={Boolean(menuAnchor)}
+        onClose={handleMenuClose}
+        PaperProps={{
+          sx: {
+            background: 'rgba(255, 255, 255, 0.9)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            borderRadius: '12px',
+            boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.1)',
+          }
+        }}
+      >
+        <MenuItem onClick={() => handleStatusClick(selectedAppointment)}>
+          <AcceptIcon sx={{ mr: 1, color: '#6366f1' }} /> Update Status
+        </MenuItem>
+        <MenuItem onClick={() => handleEditClick(selectedAppointment)}>
+          <EditIcon sx={{ mr: 1, color: '#10b981' }} /> Edit Reason
+        </MenuItem>
+        
+        {isDoctor && (selectedAppointment?.status === 'COMPLETED' || selectedAppointment?.status === 'IN_PROGRESS') && (
+          <MenuItem onClick={() => handlePrescriptionClick(selectedAppointment)}>
+            <DescriptionIcon sx={{ mr: 1, color: '#f59e0b' }} /> 
+            {existingPrescription ? 'View Prescription' : 'Create Prescription'}
+          </MenuItem>
+        )}
+        
+        {/* Only show delete option for ADMIN */}
+        {user?.roles?.includes('ROLE_ADMIN') && (
+          <MenuItem onClick={() => handleDeleteClick(selectedAppointment)} sx={{ color: '#ef4444' }}>
+            <DeleteIcon sx={{ mr: 1 }} /> Delete Appointment
+          </MenuItem>
+        )}
+      </Menu>
+
+      {/* Dialogs remain the same */}
+      <Dialog open={statusDialogOpen} onClose={() => setStatusDialogOpen(false)}>
+        <DialogTitle>Update Appointment Status</DialogTitle>
+        <DialogContent>
+          <FormControl fullWidth sx={{ mt: 2 }}>
+            <InputLabel>New Status</InputLabel>
+            <Select
+              value={newStatus}
+              onChange={(e) => setNewStatus(e.target.value)}
+              label="New Status"
+            >
+              {getStatusOptions().map((status) => (
+                <MenuItem key={status} value={status}>
+                  {getStatusChip(status)}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          {appointmentForStatus && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="body2" color="textSecondary">
+                Patient: <strong>{appointmentForStatus.patientName}</strong>
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Doctor: <strong>Dr. {appointmentForStatus.doctorName}</strong>
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Date: <strong>{formatDate(appointmentForStatus.appointmentDate)}</strong>
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setStatusDialogOpen(false)}>Cancel</Button>
+          <Button 
+            onClick={handleStatusUpdate} 
+            variant="contained"
+            disabled={!newStatus}
+          >
+            Update Status
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Edit Appointment Reason</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            multiline
+            rows={4}
+            label="Appointment Reason"
+            value={editReason}
+            onChange={(e) => setEditReason(e.target.value)}
+            sx={{ mt: 2 }}
+          />
+          {appointmentForEdit && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="body2" color="textSecondary">
+                Patient: <strong>{appointmentForEdit.patientName}</strong>
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Date: <strong>{formatDate(appointmentForEdit.appointmentDate)}</strong>
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+          <Button 
+            onClick={handleEditSave} 
+            variant="contained"
+            disabled={!editReason.trim()}
+          >
+            Save Changes
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <PrescriptionForm
+        open={prescriptionDialogOpen}
+        onClose={(refresh) => {
+          setPrescriptionDialogOpen(false);
+          setSelectedAppointmentForPrescription(null);
+          setExistingPrescription(null);
+          if (refresh) {
+            loadAppointments();
+          }
+        }}
+        appointment={selectedAppointmentForPrescription}
+        prescription={existingPrescription}
+      />
+
+      <PrescriptionView
+        open={prescriptionViewOpen}
+        onClose={() => {
+          setPrescriptionViewOpen(false);
+          setSelectedAppointmentForView(null);
+          setPrescriptionToView(null);
+        }}
+        prescription={prescriptionToView}
+        appointment={selectedAppointmentForView}
+      />
+
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Appointment"
+        message={`Are you sure you want to delete this appointment for ${appointmentToDelete?.patientName}? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        severity="error"
+      />
+    </Box>
+  );
+};
+
+export default AppointmentsList;

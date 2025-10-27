@@ -1,0 +1,1091 @@
+package com.hms.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+@Configuration
+public class CorsConfig {
+
+    @Bean
+    public WebMvcConfigurer corsConfigurer() {
+        return new WebMvcConfigurer() {
+            @Override
+            public void addCorsMappings(CorsRegistry registry) {
+                registry.addMapping("/**")
+                        .allowedOrigins("http://localhost:5173") // your frontend port
+                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                        .allowedHeaders("*")
+                        .allowCredentials(true);
+            }
+        };
+    }
+}
+package com.hms.config;
+
+import java.io.IOException;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.lang.NonNull;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService; // It's good practice to import the annotation
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import com.hms.util.JwtUtil;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
+@Component
+public class JwtRequestFilter extends OncePerRequestFilter {
+
+    @Autowired
+    private UserDetailsService userDetailsService;
+
+    @Autowired
+    private JwtUtil jwtUtil;
+
+    @Override
+    protected void doFilterInternal(
+            @NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain)
+            throws ServletException, IOException {
+
+        final String authorizationHeader = request.getHeader("Authorization");
+
+        String username = null;
+        String jwt = null;
+
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            jwt = authorizationHeader.substring(7);
+            try {
+                username = jwtUtil.extractUsername(jwt);
+            } catch (Exception e) {
+                System.out.println("Cannot parse JWT token");
+            }
+        }
+
+        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
+
+            if (jwtUtil.validateToken(jwt, userDetails.getUsername())) {
+                UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken =
+                        new UsernamePasswordAuthenticationToken(
+                                userDetails, null, userDetails.getAuthorities());
+                usernamePasswordAuthenticationToken
+                        .setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
+            }
+        }
+
+        filterChain.doFilter(request, response);
+    }
+}package com.hms.config;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+@Configuration
+@EnableMethodSecurity
+public class SecurityConfig {
+
+    @Autowired
+    private JwtRequestFilter jwtRequestFilter;
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
+        http
+            // ✅ Enable CORS
+            .cors(cors -> {})
+
+            // ❌ Disable CSRF for APIs
+            .csrf(csrf -> csrf.disable())
+
+            .authorizeHttpRequests(auth -> auth
+                // --- Public endpoints ---
+                .requestMatchers("/", "/auth/**").permitAll()
+
+                // --- Doctor endpoints ---
+                .requestMatchers(HttpMethod.GET, "/doctors", "/doctors/**")
+                    .hasAnyAuthority("ROLE_ADMIN", "ROLE_DOCTOR")
+                .requestMatchers(HttpMethod.POST, "/doctors")
+                    .hasAuthority("ROLE_ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/doctors/**")
+                    .hasAuthority("ROLE_ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/doctors/**")
+                    .hasAuthority("ROLE_ADMIN")
+
+                // --- Patient endpoints ---
+                .requestMatchers(HttpMethod.GET, "/patients", "/patients/**")
+                    .hasAnyAuthority("ROLE_ADMIN", "ROLE_DOCTOR")
+                .requestMatchers(HttpMethod.POST, "/patients")
+                    .hasAuthority("ROLE_ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/patients/**")
+                    .hasAuthority("ROLE_ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/patients/**")
+                    .hasAuthority("ROLE_ADMIN")
+
+                // --- Appointment endpoints ---
+                .requestMatchers(HttpMethod.GET, "/appointments", "/appointments/**")
+                    .hasAnyAuthority("ROLE_ADMIN", "ROLE_DOCTOR", "ROLE_PATIENT", "ROLE_USER")
+                .requestMatchers(HttpMethod.POST, "/appointments")
+                    .hasAnyAuthority("ROLE_ADMIN", "ROLE_PATIENT", "ROLE_USER")
+                .requestMatchers(HttpMethod.PUT, "/appointments/**")
+                    .hasAnyAuthority("ROLE_ADMIN", "ROLE_DOCTOR")
+                .requestMatchers(HttpMethod.DELETE, "/appointments/**")
+                    .hasAuthority("ROLE_ADMIN")
+
+                // --- Everything else ---
+                .anyRequest().authenticated()
+            )
+
+            // ✅ Use stateless session (for JWT)
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+
+        // ✅ Add JWT filter before username-password filter
+        http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
+
+    // --- Password encoder ---
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    // --- Authentication Manager ---
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
+    }
+}
+package com.hms.controller;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.hms.entity.Appointment;
+import com.hms.service.AppointmentService;
+
+@RestController
+@RequestMapping("/api/appointments")
+@CrossOrigin(origins = "*") // Configure for your frontend URL
+public class AppointmentController {
+
+    @Autowired
+    private AppointmentService appointmentService;
+
+    // Patient books an appointment
+    @PostMapping
+    public ResponseEntity<Appointment> createAppointment(@RequestBody Appointment appointment) {
+        return ResponseEntity.ok(appointmentService.createAppointment(appointment));
+    }
+
+    // Admin gets all appointments
+    @GetMapping
+    public List<Appointment> getAllAppointments() {
+        return appointmentService.getAllAppointments();
+    }
+    
+    // Patient gets their own appointments
+    @GetMapping("/patient/{patientId}")
+    public ResponseEntity<List<Appointment>> getAppointmentsForPatient(@PathVariable Long patientId) {
+        return ResponseEntity.ok(appointmentService.getAppointmentsForPatient(patientId));
+    }
+
+    // Doctor gets their own appointments
+    @GetMapping("/doctor/{doctorId}")
+    public ResponseEntity<List<Appointment>> getAppointmentsForDoctor(@PathVariable Long doctorId) {
+        return ResponseEntity.ok(appointmentService.getAppointmentsForDoctor(doctorId));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteAppointment(@PathVariable Long id) {
+        appointmentService.deleteAppointment(id);
+        return ResponseEntity.noContent().build();
+    }
+}package com.hms.controller;
+
+import com.hms.entity.Doctor;
+import com.hms.service.DoctorService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/doctors") // CORRECTED URL
+public class DoctorController {
+
+    private final DoctorService doctorService;
+
+    public DoctorController(DoctorService doctorService) {
+        this.doctorService = doctorService;
+    }
+
+    @PostMapping
+    public ResponseEntity<Doctor> createDoctor(@RequestBody Doctor doctor) {
+        return ResponseEntity.ok(doctorService.saveDoctor(doctor));
+    }
+
+    @GetMapping
+    public List<Doctor> getAllDoctors() {
+        return doctorService.getAllDoctors();
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Doctor> getDoctorById(@PathVariable Long id) {
+        return doctorService.getDoctorById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Doctor> updateDoctor(@PathVariable Long id, @RequestBody Doctor doctor) {
+        return ResponseEntity.ok(doctorService.updateDoctor(id, doctor));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteDoctor(@PathVariable Long id) {
+        doctorService.deleteDoctor(id);
+        return ResponseEntity.noContent().build();
+    }
+}package com.hms.controller;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class HomeController {
+
+    @GetMapping("/")
+    public String home() {
+        return "Hospital Management App is Running!";
+    }
+}
+package com.hms.controller;
+
+import com.hms.entity.Patient;
+import com.hms.service.PatientService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/patients")
+public class PatientController {
+
+    @Autowired
+    private PatientService patientService;
+
+    @PostMapping
+    public Patient createPatient(@RequestBody Patient patient) {
+        return patientService.createPatient(patient);
+    }
+
+    @GetMapping
+    public List<Patient> getAllPatients() {
+        return patientService.getAllPatients();
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Patient> getPatientById(@PathVariable Long id) {
+        return patientService.getPatientById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Patient> updatePatient(@PathVariable Long id, @RequestBody Patient updated) {
+        return patientService.updatePatient(id, updated)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deletePatient(@PathVariable Long id) {
+        if (patientService.deletePatient(id)) {
+            return ResponseEntity.<Void>noContent().build();
+        }
+        return ResponseEntity.notFound().build();
+    }
+}package com.hms.controller;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.hms.entity.User;
+import com.hms.service.UserService;
+
+@RestController
+@RequestMapping("/api/profile")
+@CrossOrigin(origins = "*") // Configure for your frontend URL
+public class ProfileController {
+
+    @Autowired
+    private UserService userService;
+
+    // Endpoint for a user to get their own details
+    @GetMapping("/me")
+    public ResponseEntity<User> getCurrentUserProfile(@AuthenticationPrincipal UserDetails userDetails) {
+        User user = userService.getUserByUsername(userDetails.getUsername());
+        return ResponseEntity.ok(user);
+    }
+
+    // Endpoint for a user to update their own details
+    @PutMapping("/me")
+    public ResponseEntity<User> updateCurrentUserProfile(@AuthenticationPrincipal UserDetails userDetails, @RequestBody User userUpdateInfo) {
+        User updatedUser = userService.updateUser(userDetails.getUsername(), userUpdateInfo);
+        return ResponseEntity.ok(updatedUser);
+    }
+    
+    // Endpoint for a user to delete their own account
+    @DeleteMapping("/me")
+    public ResponseEntity<Void> deleteCurrentUserAccount(@AuthenticationPrincipal UserDetails userDetails) {
+        userService.deleteUser(userDetails.getUsername());
+        return ResponseEntity.noContent().build();
+    }
+}package com.hms.controller;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.hms.entity.DoctorSchedule;
+import com.hms.service.DoctorScheduleService;
+
+@RestController
+@RequestMapping("/api/schedules")
+@CrossOrigin(origins = "*") // Configure for your frontend URL
+public class ScheduleController {
+
+    @Autowired
+    private DoctorScheduleService scheduleService;
+
+    // Endpoint for Admin to create a new schedule slot
+    @PostMapping
+    public ResponseEntity<DoctorSchedule> createSchedule(@RequestBody DoctorSchedule schedule) {
+        return ResponseEntity.ok(scheduleService.createSchedule(schedule));
+    }
+
+    // Endpoint for anyone to see a doctor's AVAILABLE slots
+    @GetMapping("/doctor/{doctorId}/available")
+    public ResponseEntity<List<DoctorSchedule>> getAvailableSchedules(@PathVariable Long doctorId) {
+        return ResponseEntity.ok(scheduleService.getAvailableSchedulesForDoctor(doctorId));
+    }
+
+    // Endpoint for Admin/Doctor to see ALL of a doctor's slots (booked and unbooked)
+    @GetMapping("/doctor/{doctorId}")
+    public ResponseEntity<List<DoctorSchedule>> getAllSchedulesForDoctor(@PathVariable Long doctorId) {
+        return ResponseEntity.ok(scheduleService.getSchedulesForDoctor(doctorId));
+    }
+    
+    // Endpoint for Admin to remove a schedule slot
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteSchedule(@PathVariable Long id) {
+        scheduleService.deleteSchedule(id);
+        return ResponseEntity.noContent().build();
+    }
+}package com.hms.dto;
+
+public record JwtRequest(String username, String password) {
+}package com.hms.dto;
+
+public class JwtResponse {
+    private String token;
+
+    public JwtResponse(String token) {
+        this.token = token;
+    }
+
+    public String getToken() {
+        return token;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
+    }
+}
+package com.hms.dto;
+
+public class JwtResponse {
+    private String token;
+
+    public JwtResponse(String token) {
+        this.token = token;
+    }
+
+    public String getToken() {
+        return token;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
+    }
+}package com.hms.entity;
+
+import jakarta.persistence.*;
+
+@Entity
+public class Doctor {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+    private String specialization;
+    private String contact;
+
+    public Doctor() {}
+
+    public Doctor(String name, String specialization, String contact) {
+        this.name = name;
+        this.specialization = specialization;
+        this.contact = contact;
+    }
+
+    // Getters and Setters
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+
+    public String getSpecialization() { return specialization; }
+    public void setSpecialization(String specialization) { this.specialization = specialization; }
+
+    public String getContact() { return contact; }
+    public void setContact(String contact) { this.contact = contact; }
+}
+
+package com.hms.entity;
+
+import jakarta.persistence.*;
+import java.time.LocalDate;
+import java.time.LocalTime;
+
+@Entity
+public class DoctorSchedule {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "doctor_id", nullable = false)
+    private Doctor doctor;
+
+    private LocalDate availableDate;
+    private LocalTime startTime;
+    private LocalTime endTime;
+
+    @Column(columnDefinition = "boolean default false")
+    private boolean isBooked = false;
+
+    // Getters and Setters
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public Doctor getDoctor() { return doctor; }
+    public void setDoctor(Doctor doctor) { this.doctor = doctor; }
+    public LocalDate getAvailableDate() { return availableDate; }
+    public void setAvailableDate(LocalDate availableDate) { this.availableDate = availableDate; }
+    public LocalTime getStartTime() { return startTime; }
+    public void setStartTime(LocalTime startTime) { this.startTime = startTime; }
+    public LocalTime getEndTime() { return endTime; }
+    public void setEndTime(LocalTime endTime) { this.endTime = endTime; }
+    public boolean isBooked() { return isBooked; }
+    public void setBooked(boolean booked) { isBooked = booked; }
+}package com.hms.entity;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+
+@Entity
+public class Patient {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+    private int age;
+    private String gender;
+
+    // Default constructor
+    public Patient() {}
+
+    // Getters and Setters
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    public void setAge(int age) {
+        this.age = age;
+    }
+
+    public String getGender() {
+        return gender;
+    }
+
+    public void setGender(String gender) {
+        this.gender = gender;
+    }
+}package com.hms.entity;
+
+import jakarta.persistence.*;
+import java.util.Set;
+
+@Entity
+public class User {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String username;
+    private String password;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    private Set<String> roles;
+
+    public User() {}
+
+    public User(String username, String password, Set<String> roles) {
+        this.username = username;
+        this.password = password;
+        this.roles = roles;
+    }
+
+    // Getters and Setters
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public String getUsername() { return username; }
+    public void setUsername(String username) { this.username = username; }
+
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
+
+    public Set<String> getRoles() { return roles; }
+    public void setRoles(Set<String> roles) { this.roles = roles; }
+}
+package com.hms.exception;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+
+@ControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<String> handleAllExceptions(Exception ex) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                             .body("Error: " + ex.getMessage());
+    }
+
+}
+package com.hms.repository;
+
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.hms.entity.Appointment;
+
+public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
+    
+    // Find appointments for a specific patient
+    List<Appointment> findByPatientId(Long patientId);
+
+    // Find appointments for a specific doctor
+    List<Appointment> findByDoctorId(Long doctorId);
+}package com.hms.repository;
+
+import com.hms.entity.Doctor;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface DoctorRepository extends JpaRepository<Doctor, Long> {}
+package com.hms.repository;
+
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.hms.entity.DoctorSchedule;
+
+public interface DoctorScheduleRepository extends JpaRepository<DoctorSchedule, Long> {
+    // Find all schedules for a specific doctor
+    List<DoctorSchedule> findByDoctorId(Long doctorId);
+
+    // Find available (not booked) schedules for a specific doctor
+    List<DoctorSchedule> findByDoctorIdAndIsBookedFalse(Long doctorId);
+}
+package com.hms.repository;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import com.hms.entity.Patient;
+
+public interface PatientRepository extends JpaRepository<Patient, Long> {}
+package com.hms.repository;
+
+import com.hms.entity.User;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.Optional;
+
+@Repository
+public interface UserRepository extends JpaRepository<User, Long> {
+    Optional<User> findByUsername(String username);
+}package com.hms.service;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.hms.entity.Appointment;
+import com.hms.entity.DoctorSchedule;
+import com.hms.repository.AppointmentRepository;
+import com.hms.repository.DoctorScheduleRepository;
+
+@Service
+public class AppointmentService {
+
+    @Autowired
+    private AppointmentRepository appointmentRepository;
+
+    @Autowired
+    private DoctorScheduleRepository scheduleRepository;
+
+    @Transactional // Ensures the whole method succeeds or fails together
+    public Appointment createAppointment(Appointment appointment) {
+        // 1. Find the schedule slot the user wants to book
+        DoctorSchedule schedule = scheduleRepository.findById(appointment.getSchedule().getId())
+                .orElseThrow(() -> new RuntimeException("Schedule slot not found"));
+
+        // 2. Check if the slot is already booked
+        if (schedule.isBooked()) {
+            throw new RuntimeException("This schedule slot is already booked.");
+        }
+
+        // 3. Mark the slot as booked
+        schedule.setBooked(true);
+        scheduleRepository.save(schedule);
+
+        // 4. Set default status and save the appointment
+        appointment.setStatus("SCHEDULED");
+        return appointmentRepository.save(appointment);
+    }
+
+    public List<Appointment> getAllAppointments() {
+        return appointmentRepository.findAll();
+    }
+
+    public Optional<Appointment> getAppointmentById(Long id) {
+        return appointmentRepository.findById(id);
+    }
+
+    // Get appointments for a specific patient
+    public List<Appointment> getAppointmentsForPatient(Long patientId) {
+        return appointmentRepository.findByPatientId(patientId);
+    }
+
+    // Get appointments for a specific doctor
+    public List<Appointment> getAppointmentsForDoctor(Long doctorId) {
+        return appointmentRepository.findByDoctorId(doctorId);
+    }
+
+    public void deleteAppointment(Long id) {
+        appointmentRepository.deleteById(id);
+    }
+}package com.hms.service;
+
+import com.hms.entity.User;
+import com.hms.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+public class CustomUserDetailsService implements UserDetailsService {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        // Convert Set<String> roles to List<SimpleGrantedAuthority>
+        List<SimpleGrantedAuthority> authorities = user.getRoles()
+                .stream()
+                .map(SimpleGrantedAuthority::new)
+                .collect(Collectors.toList());
+
+        return new org.springframework.security.core.userdetails.User(
+                user.getUsername(),
+                user.getPassword(),
+                authorities
+        );
+    }
+}
+package com.hms.service;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.hms.entity.Doctor;
+import com.hms.entity.DoctorSchedule;
+import com.hms.repository.DoctorRepository;
+import com.hms.repository.DoctorScheduleRepository;
+
+@Service
+public class DoctorScheduleService {
+
+    @Autowired
+    private DoctorScheduleRepository scheduleRepository;
+
+    @Autowired
+    private DoctorRepository doctorRepository;
+
+    // Admin creates a schedule
+    public DoctorSchedule createSchedule(DoctorSchedule schedule) {
+        // Ensure the doctor exists before saving the schedule
+        Doctor doctor = doctorRepository.findById(schedule.getDoctor().getId())
+                .orElseThrow(() -> new RuntimeException("Doctor not found"));
+        schedule.setDoctor(doctor);
+        return scheduleRepository.save(schedule);
+    }
+
+    // Get all schedules for a doctor (for Admin/Doctor view)
+    public List<DoctorSchedule> getSchedulesForDoctor(Long doctorId) {
+        return scheduleRepository.findByDoctorId(doctorId);
+    }
+
+    // Get only available slots for a doctor (for Patient view)
+    public List<DoctorSchedule> getAvailableSchedulesForDoctor(Long doctorId) {
+        return scheduleRepository.findByDoctorIdAndIsBookedFalse(doctorId);
+    }
+    
+    public void deleteSchedule(Long id) {
+        scheduleRepository.deleteById(id);
+    }
+}package com.hms.service;
+
+import com.hms.entity.Doctor;
+import com.hms.repository.DoctorRepository;
+import org.springframework.stereotype.Service;
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class DoctorService {
+
+    private final DoctorRepository doctorRepository;
+
+    public DoctorService(DoctorRepository doctorRepository) {
+        this.doctorRepository = doctorRepository;
+    }
+
+    public Doctor saveDoctor(Doctor doctor) {
+        return doctorRepository.save(doctor);
+    }
+
+    public List<Doctor> getAllDoctors() {
+        return doctorRepository.findAll();
+    }
+
+    public Optional<Doctor> getDoctorById(Long id) {
+        return doctorRepository.findById(id);
+    }
+
+    public void deleteDoctor(Long id) {
+        doctorRepository.deleteById(id);
+    }
+
+    public Doctor updateDoctor(Long id, Doctor updatedDoctor) {
+        return doctorRepository.findById(id).map(doctor -> {
+            doctor.setName(updatedDoctor.getName());
+            doctor.setSpecialization(updatedDoctor.getSpecialization());
+            doctor.setContact(updatedDoctor.getContact());
+            return doctorRepository.save(doctor);
+        }).orElseThrow(() -> new RuntimeException("Doctor not found"));
+    }
+}
+package com.hms.service;
+
+import com.hms.entity.Patient;
+import com.hms.repository.PatientRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class PatientService {
+
+    @Autowired
+    private PatientRepository patientRepository;
+
+    public Patient createPatient(Patient patient) {
+        return patientRepository.save(patient);
+    }
+
+    public List<Patient> getAllPatients() {
+        return patientRepository.findAll();
+    }
+
+    public Optional<Patient> getPatientById(Long id) {
+        return patientRepository.findById(id);
+    }
+
+    public Optional<Patient> updatePatient(Long id, Patient updated) {
+        return patientRepository.findById(id).map(patient -> {
+            patient.setName(updated.getName());
+            patient.setAge(updated.getAge());
+            patient.setGender(updated.getGender());
+            return patientRepository.save(patient);
+        });
+    }
+
+    public boolean deletePatient(Long id) {
+        return patientRepository.findById(id).map(patient -> {
+            patientRepository.delete(patient);
+            return true;
+        }).orElse(false);
+    }
+}
+package com.hms.service;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
+
+import com.hms.entity.User;
+import com.hms.repository.UserRepository;
+
+@Service
+public class UserService {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    public User getUserByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
+    }
+
+    public User updateUser(String username, User userDetails) {
+        User existingUser = getUserByUsername(username);
+        // Update fields that are allowed to be changed
+        // For simplicity, we'll allow name/email, but not username or password here.
+        // Add more fields as necessary from your User entity.
+        // e.g., existingUser.setEmail(userDetails.getEmail());
+        return userRepository.save(existingUser);
+    }
+
+    public void deleteUser(String username) {
+        User user = getUserByUsername(username);
+        userRepository.delete(user);
+    }
+}package com.hms.util;
+
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Component;
+
+@Component
+public class HashGen implements CommandLineRunner {
+
+    @Override
+    public void run(String... args) throws Exception {
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+        String rawPassword = "adminpass";
+        String encodedPassword = encoder.encode(rawPassword);
+        System.out.println("Hashed password: " + encodedPassword);
+    }
+}
+package com.hms.util;
+
+import java.security.Key;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Function;
+
+import org.springframework.stereotype.Component;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
+
+@Component
+public class JwtUtil {
+
+    // ✅ Securely generate a 512-bit key for HS512
+    private final Key SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS512);
+
+    public String extractUsername(String token) {
+        return extractClaim(token, Claims::getSubject);
+    }
+
+    public Date extractExpiration(String token) {
+        return extractClaim(token, Claims::getExpiration);
+    }
+
+    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
+        final Claims claims = extractAllClaims(token);
+        return claimsResolver.apply(claims);
+    }
+
+    private Claims extractAllClaims(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(SECRET_KEY)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+    }
+
+    private Boolean isTokenExpired(String token) {
+        return extractExpiration(token).before(new Date());
+    }
+
+    public String generateToken(String username) {
+        Map<String, Object> claims = new HashMap<>();
+        return createToken(claims, username);
+    }
+
+    private String createToken(Map<String, Object> claims, String subject) {
+        long expirationTimeMs = 1000 * 60 * 60 * 10; // 10 hours
+
+        return Jwts.builder()
+                .setClaims(claims)
+                .setSubject(subject)
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + expirationTimeMs))
+                .signWith(SECRET_KEY, SignatureAlgorithm.HS512)
+                .compact();
+    }
+
+    public Boolean validateToken(String token, String username) {
+        final String extractedUsername = extractUsername(token);
+        return (extractedUsername.equals(username) && !isTokenExpired(token));
+    }
+}
+package com.hms;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class HospitalManagementApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(HospitalManagementApplication.class, args);
+	}
+
+}spring.application.name=hospital-management
+# MySQL Database Connection
+spring.datasource.url=jdbc:mysql://localhost:3306/hospital_management
+
+spring.datasource.username=root
+spring.datasource.password=
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+
+# JPA / Hibernate Config
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQL8Dialect
+
+# Optional: Disable Spring Security temporarily
+spring.security.user.name=admin
+spring.security.user.password=Gym6057
+
+
