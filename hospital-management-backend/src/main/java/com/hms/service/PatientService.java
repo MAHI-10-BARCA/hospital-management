@@ -8,11 +8,11 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.hms.dto.PatientProfileDTO;
 import com.hms.entity.Patient;
 import com.hms.entity.User;
 import com.hms.repository.PatientRepository;
 import com.hms.repository.UserRepository;
-
 @Service
 public class PatientService {
 
@@ -226,4 +226,29 @@ public class PatientService {
 
         return patientRepository.save(patient);
     }
+    public Patient updatePatientProfile(String username, PatientProfileDTO patientProfileDTO) {
+    Patient existingPatient = getCurrentPatient(username);
+    
+    // Update patient-specific fields
+    existingPatient.setName(patientProfileDTO.getName());
+    existingPatient.setAge(patientProfileDTO.getAge());
+    existingPatient.setGender(patientProfileDTO.getGender());
+    existingPatient.setBloodGroup(patientProfileDTO.getBloodGroup());
+    existingPatient.setHeight(patientProfileDTO.getHeight());
+    existingPatient.setWeight(patientProfileDTO.getWeight());
+    existingPatient.setAllergies(patientProfileDTO.getAllergies());
+    existingPatient.setCurrentMedications(patientProfileDTO.getCurrentMedications());
+    existingPatient.setPastMedicalHistory(patientProfileDTO.getPastMedicalHistory());
+    existingPatient.setFamilyMedicalHistory(patientProfileDTO.getFamilyMedicalHistory());
+    existingPatient.setPrimaryPhysician(patientProfileDTO.getPrimaryPhysician());
+    existingPatient.setInsuranceProvider(patientProfileDTO.getInsuranceProvider());
+    existingPatient.setInsurancePolicyNumber(patientProfileDTO.getInsurancePolicyNumber());
+    existingPatient.setInsuranceGroupNumber(patientProfileDTO.getInsuranceGroupNumber());
+    existingPatient.setEmergencyMedicalConditions(patientProfileDTO.getEmergencyMedicalConditions());
+    existingPatient.setPreferredPharmacy(patientProfileDTO.getPreferredPharmacy());
+    existingPatient.setMaritalStatus(patientProfileDTO.getMaritalStatus());
+    existingPatient.setOccupation(patientProfileDTO.getOccupation());
+    
+    return patientRepository.save(existingPatient);
+}
 }

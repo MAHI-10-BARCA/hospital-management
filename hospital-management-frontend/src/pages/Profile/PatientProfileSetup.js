@@ -1,31 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { patientService } from '../../services/patientService';
+import profileService from '../../services/profileService';
 import './PatientProfileSetup.css';
 
 const PatientProfileSetup = ({ onProfileCreated }) => {
-  const { user } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const [hasProfile, setHasProfile] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     age: '',
-    gender: ''
+    gender: '',
+    bloodGroup: '',
+    allergies: '',
+    currentMedications: ''
   });
-  const [error, setError] = useState('');
 
   useEffect(() => {
     checkPatientProfile();
-  }, [user]);
+  }, [user, profile]);
 
   const checkPatientProfile = async () => {
     try {
       setLoading(true);
-      const profile = await patientService.getMyPatientProfile();
-      setHasProfile(true);
-      if (onProfileCreated) {
-        onProfileCreated(profile);
+      if (profile && profile.age) {
+        setHasProfile(true);
+        if (onProfileCreated) {
+          onProfileCreated(profile);
+        }
+      } else {
+        setHasProfile(false);
+        setShowForm(true);
       }
     } catch (error) {
       console.log('Patient profile not found:', error.message);
@@ -38,62 +44,40 @@ const PatientProfileSetup = ({ onProfileCreated }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    
-    // Validation
-    if (!formData.name.trim()) {
-      setError('Please enter your full name');
-      return;
-    }
-    if (!formData.age || formData.age < 1 || formData.age > 120) {
-      setError('Please enter a valid age (1-120)');
-      return;
-    }
-    if (!formData.gender) {
-      setError('Please select your gender');
-      return;
-    }
-
     try {
       setLoading(true);
-      const profile = await patientService.createPatientProfile(formData);
+      await profileService.updatePatientProfile(formData);
+      await refreshProfile();
       setHasProfile(true);
       setShowForm(false);
       if (onProfileCreated) {
-        onProfileCreated(profile);
+        onProfileCreated(formData);
       }
-      // Show success message
-      alert('Patient profile created successfully! You can now book appointments.');
+      alert('Patient profile created successfully!');
     } catch (error) {
       console.error('Error creating patient profile:', error);
-      setError('Error creating patient profile: ' + (error.response?.data || error.message));
+      alert('Error creating patient profile: ' + (error.response?.data || error.message));
     } finally {
       setLoading(false);
     }
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [name]: value
+      [e.target.name]: e.target.value
     });
-    setError('');
   };
 
   if (loading) {
-    return (
-      <div className="patient-profile-setup">
-        <div className="loading">Checking patient profile...</div>
-      </div>
-    );
+    return <div className="loading">Checking patient profile...</div>;
   }
 
   if (hasProfile) {
     return (
       <div className="patient-profile-setup">
         <div className="success-message">
-          ✅ Your patient profile is set up and ready! You can now book appointments.
+          ✅ Your patient profile is set up and ready!
         </div>
       </div>
     );
@@ -103,14 +87,8 @@ const PatientProfileSetup = ({ onProfileCreated }) => {
     <div className="patient-profile-setup">
       <div className="setup-header">
         <h2>Patient Profile Setup Required</h2>
-        <p>Before you can book appointments, you need to set up your patient profile with some basic information.</p>
+        <p>Please complete your patient profile to access all features.</p>
       </div>
-
-      {error && (
-        <div className="error-message">
-          {error}
-        </div>
-      )}
 
       {showForm && (
         <form onSubmit={handleSubmit} className="patient-profile-form">
@@ -124,7 +102,6 @@ const PatientProfileSetup = ({ onProfileCreated }) => {
               onChange={handleChange}
               required
               placeholder="Enter your full name"
-              disabled={loading}
             />
           </div>
 
@@ -140,7 +117,6 @@ const PatientProfileSetup = ({ onProfileCreated }) => {
               min="1"
               max="120"
               placeholder="Enter your age"
-              disabled={loading}
             />
           </div>
 
@@ -152,7 +128,6 @@ const PatientProfileSetup = ({ onProfileCreated }) => {
               value={formData.gender}
               onChange={handleChange}
               required
-              disabled={loading}
             >
               <option value="">Select Gender</option>
               <option value="Male">Male</option>
@@ -162,11 +137,51 @@ const PatientProfileSetup = ({ onProfileCreated }) => {
             </select>
           </div>
 
-          <button 
-            type="submit" 
-            disabled={loading} 
-            className="submit-btn"
-          >
+          <div className="form-group">
+            <label htmlFor="bloodGroup">Blood Group</label>
+            <select
+              id="bloodGroup"
+              name="bloodGroup"
+              value={formData.bloodGroup}
+              onChange={handleChange}
+            >
+              <option value="">Select Blood Group</option>
+              <option value="A+">A+</option>
+              <option value="A-">A-</option>
+              <option value="B+">B+</option>
+              <option value="B-">B-</option>
+              <option value="AB+">AB+</option>
+              <option value="AB-">AB-</option>
+              <option value="O+">O+</option>
+              <option value="O-">O-</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="allergies">Allergies</label>
+            <textarea
+              id="allergies"
+              name="allergies"
+              value={formData.allergies}
+              onChange={handleChange}
+              placeholder="List any allergies..."
+              rows="2"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="currentMedications">Current Medications</label>
+            <textarea
+              id="currentMedications"
+              name="currentMedications"
+              value={formData.currentMedications}
+              onChange={handleChange}
+              placeholder="List current medications..."
+              rows="2"
+            />
+          </div>
+
+          <button type="submit" disabled={loading} className="submit-btn">
             {loading ? 'Creating Profile...' : 'Create Patient Profile'}
           </button>
         </form>

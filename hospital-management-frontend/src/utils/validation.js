@@ -69,3 +69,42 @@ export const appointmentValidationSchema = yup.object({
     .string()
     .required('Reason for appointment is required'),
 });
+export const userProfileValidationSchema = yup.object({
+  firstName: yup
+    .string()
+    .max(50, 'First name must be less than 50 characters'),
+  lastName: yup
+    .string()
+    .max(50, 'Last name must be less than 50 characters'),
+  email: yup
+    .string()
+    .email('Invalid email address'),
+  phoneNumber: yup
+    .string()
+    .matches(/^[0-9+\-\s()]*$/, 'Invalid phone number format'),
+  dateOfBirth: yup
+    .date()
+    .max(new Date(), 'Date of birth cannot be in the future'),
+  bio: yup
+    .string()
+    .max(500, 'Bio must be less than 500 characters')
+});
+
+export const doctorProfileValidationSchema = yup.object({
+  name: yup.string().required('Name is required'),
+  specialization: yup.string().required('Specialization is required'),
+  contact: yup.string().required('Contact information is required'),
+  qualifications: yup.string(),
+  experienceYears: yup.number().min(0, 'Experience cannot be negative'),
+  licenseNumber: yup.string(),
+  consultationFee: yup.number().min(0, 'Fee cannot be negative')
+});
+
+export const patientProfileValidationSchema = yup.object({
+  name: yup.string().required('Name is required'),
+  age: yup.number().min(0, 'Age must be positive').max(150, 'Age must be reasonable'),
+  gender: yup.string().required('Gender is required'),
+  bloodGroup: yup.string(),
+  height: yup.number().min(0, 'Height must be positive'),
+  weight: yup.number().min(0, 'Weight must be positive')
+});
