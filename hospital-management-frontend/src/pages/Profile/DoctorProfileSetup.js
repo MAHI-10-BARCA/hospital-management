@@ -1,30 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { doctorService } from '../../services/doctorService';
+import profileService from '../../services/profileService';
 import './DoctorProfileSetup.css';
 
 const DoctorProfileSetup = ({ onProfileCreated }) => {
-  const { user } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const [hasProfile, setHasProfile] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     specialization: '',
-    contact: ''
+    contact: '',
+    qualifications: '',
+    experienceYears: '',
+    licenseNumber: '',
+    department: '',
+    consultationFee: ''
   });
 
   useEffect(() => {
     checkDoctorProfile();
-  }, [user]);
+  }, [user, profile]);
 
   const checkDoctorProfile = async () => {
     try {
       setLoading(true);
-      const profile = await doctorService.getMyDoctorProfile();
-      setHasProfile(true);
-      if (onProfileCreated) {
-        onProfileCreated(profile);
+      if (profile && profile.specialization) {
+        setHasProfile(true);
+        if (onProfileCreated) {
+          onProfileCreated(profile);
+        }
+      } else {
+        setHasProfile(false);
+        setShowForm(true);
       }
     } catch (error) {
       console.log('Doctor profile not found:', error.message);
@@ -39,13 +48,14 @@ const DoctorProfileSetup = ({ onProfileCreated }) => {
     e.preventDefault();
     try {
       setLoading(true);
-      const profile = await doctorService.createDoctorProfile(formData);
+      await profileService.updateDoctorProfile(formData);
+      await refreshProfile();
       setHasProfile(true);
       setShowForm(false);
       if (onProfileCreated) {
-        onProfileCreated(profile);
+        onProfileCreated(formData);
       }
-      alert('Doctor profile created successfully! You can now add schedules.');
+      alert('Doctor profile created successfully!');
     } catch (error) {
       console.error('Error creating doctor profile:', error);
       alert('Error creating doctor profile: ' + (error.response?.data || error.message));
@@ -66,7 +76,7 @@ const DoctorProfileSetup = ({ onProfileCreated }) => {
   }
 
   if (hasProfile) {
-    return null; // Don't show anything if profile exists
+    return null;
   }
 
   return (
@@ -114,6 +124,42 @@ const DoctorProfileSetup = ({ onProfileCreated }) => {
               onChange={handleChange}
               required
               placeholder="Phone number or email"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="qualifications">Qualifications</label>
+            <textarea
+              id="qualifications"
+              name="qualifications"
+              value={formData.qualifications}
+              onChange={handleChange}
+              placeholder="Your educational qualifications and certifications"
+              rows="3"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="experienceYears">Experience (Years)</label>
+            <input
+              type="number"
+              id="experienceYears"
+              name="experienceYears"
+              value={formData.experienceYears}
+              onChange={handleChange}
+              placeholder="Years of experience"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="licenseNumber">License Number</label>
+            <input
+              type="text"
+              id="licenseNumber"
+              name="licenseNumber"
+              value={formData.licenseNumber}
+              onChange={handleChange}
+              placeholder="Medical license number"
             />
           </div>
 

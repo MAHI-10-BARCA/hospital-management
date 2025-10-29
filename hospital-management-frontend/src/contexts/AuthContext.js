@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { authService } from '../services/authService';
+import profileService from '../services/profileService';
 
 const AuthContext = createContext();
 
@@ -13,6 +14,7 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -38,7 +40,16 @@ export const AuthProvider = ({ children }) => {
       }
       
       setUser(userData);
-      console.log('✅ User profile loaded successfully:', userData);
+      
+      // Load detailed profile
+      try {
+        const detailedProfile = await profileService.getCurrentProfile();
+        setProfile(detailedProfile);
+        console.log('✅ Detailed profile loaded:', detailedProfile);
+      } catch (profileError) {
+        console.log('⚠️ Could not load detailed profile, using basic user data');
+        setProfile(userData);
+      }
       
     } catch (error) {
       console.error('❌ Failed to load user profile:', error);
@@ -54,7 +65,6 @@ export const AuthProvider = ({ children }) => {
       const response = await authService.login(credentials);
       console.log('✅ Login API response:', response);
       
-      // ✅ FIX: The response now contains token, id, username, and roles
       const { token, id, username, roles } = response;
       
       if (!token) {
@@ -63,7 +73,6 @@ export const AuthProvider = ({ children }) => {
       
       localStorage.setItem('token', token);
       
-      // Create user object from login response
       const userData = {
         id: id,
         username: username,
@@ -77,6 +86,15 @@ export const AuthProvider = ({ children }) => {
       }
       
       setUser(userData);
+      
+      // Load detailed profile after login
+      try {
+        const detailedProfile = await profileService.getCurrentProfile();
+        setProfile(detailedProfile);
+      } catch (profileError) {
+        console.log('⚠️ Could not load detailed profile immediately after login');
+        setProfile(userData);
+      }
       
       return { success: true, user: userData };
     } catch (error) {
@@ -104,13 +122,14 @@ export const AuthProvider = ({ children }) => {
     console.log('🚪 Logging out...');
     localStorage.removeItem('token');
     setUser(null);
+    setProfile(null);
   };
 
-  const updateProfile = async (userData) => {
+  const updateProfile = async (profileData) => {
     try {
-      const updatedUser = await authService.updateProfile(userData);
-      setUser(updatedUser);
-      return { success: true, user: updatedUser };
+      const updatedProfile = await profileService.updateUserProfile(profileData);
+      setProfile(updatedProfile);
+      return { success: true, profile: updatedProfile };
     } catch (error) {
       return { 
         success: false, 
@@ -119,29 +138,45 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const refreshProfile = async () => {
+    try {
+      const detailedProfile = await profileService.getCurrentProfile();
+      setProfile(detailedProfile);
+      return detailedProfile;
+    } catch (error) {
+      console.error('Failed to refresh profile:', error);
+      throw error;
+    }
+  };
+
   // Check if user has specific role
   const hasRole = (role) => {
     if (!user || !user.roles) return false;
-    
-    // Handle both "ROLE_ADMIN" and "ADMIN" formats
     const normalizedRole = role.startsWith('ROLE_') ? role : `ROLE_${role}`;
     return user.roles.includes(normalizedRole);
   };
 
-  // Check if user is admin (for booking restrictions)
+  // Check user type
   const isAdmin = () => hasRole('ADMIN');
+  const isDoctor = () => hasRole('DOCTOR');
+  const isPatient = () => hasRole('PATIENT');
 
   const value = {
     user,
+    profile,
     loading,
     login,
     register,
     logout,
     updateProfile,
+    refreshProfile,
     hasRole,
     isAdmin,
+    isDoctor,
+    isPatient,
     loadUserProfile
   };
+  
 
   return (
     <AuthContext.Provider value={value}>

@@ -8,11 +8,11 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.hms.dto.DoctorProfileDTO;
 import com.hms.entity.Doctor;
 import com.hms.entity.User;
 import com.hms.repository.DoctorRepository;
 import com.hms.repository.UserRepository;
-
 @Service
 public class DoctorService {
 
@@ -195,4 +195,24 @@ public class DoctorService {
         
         return doctorRepository.save(newDoctor);
     }
+    public Doctor updateDoctorProfile(String username, DoctorProfileDTO doctorProfileDTO) {
+    Doctor existingDoctor = getCurrentDoctor(username);
+    
+    // Update doctor-specific fields
+    existingDoctor.setName(doctorProfileDTO.getName());
+    existingDoctor.setSpecialization(doctorProfileDTO.getSpecialization());
+    existingDoctor.setContact(doctorProfileDTO.getContact());
+    existingDoctor.setQualifications(doctorProfileDTO.getQualifications());
+    existingDoctor.setExperienceYears(doctorProfileDTO.getExperienceYears());
+    existingDoctor.setLicenseNumber(doctorProfileDTO.getLicenseNumber());
+    existingDoctor.setDepartment(doctorProfileDTO.getDepartment());
+    existingDoctor.setConsultationFee(doctorProfileDTO.getConsultationFee());
+    existingDoctor.setLanguagesSpoken(doctorProfileDTO.getLanguagesSpoken());
+    existingDoctor.setAwardsHonors(doctorProfileDTO.getAwardsHonors());
+    existingDoctor.setProfessionalBio(doctorProfileDTO.getProfessionalBio());
+    existingDoctor.setOfficeLocation(doctorProfileDTO.getOfficeLocation());
+    existingDoctor.setOfficeHours(doctorProfileDTO.getOfficeHours());
+    
+    return doctorRepository.save(existingDoctor);
+}
 }

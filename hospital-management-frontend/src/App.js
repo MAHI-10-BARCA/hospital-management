@@ -19,8 +19,9 @@ import EditPatient from './pages/Patients/EditPatient';
 import AppointmentsList from './pages/Appointments/AppointmentsList';
 import BookAppointment from './pages/Appointments/BookAppointment';
 import UserProfile from './pages/Profile/UserProfile';
+import EditProfile from './pages/Profile/EditProfile'; // ✅ ADD THIS IMPORT
 import UserManagement from './pages/Admin/UserManagement';
-import ManageSchedule from './pages/Schedules/ManageSchedule'; // Add this import
+import ManageSchedule from './pages/Schedules/ManageSchedule';
 import LoadingSpinner from './components/Common/LoadingSpinner';
 import ProtectedRoute from './components/Common/ProtectedRoute';
 import SchedulesList from './pages/Schedules/SchedulesList';
@@ -145,9 +146,8 @@ function App() {
                       <ManageSchedule />
                     </ProtectedRoute>
                   } />
-                  // Add these routes
-<Route path="/schedules/manage" element={<ManageSchedule />} />
-<Route path="/schedules" element={<SchedulesList />} />
+                  <Route path="schedules" element={<SchedulesList />} />
+                  
                   {/* Admin Routes */}
                   <Route path="admin/users" element={
                     <ProtectedRoute requiredRole="ROLE_ADMIN">
@@ -157,6 +157,7 @@ function App() {
                   
                   {/* Profile Routes */}
                   <Route path="profile" element={<UserProfile />} />
+                  <Route path="profile/edit" element={<EditProfile />} /> {/* ✅ MOVED INSIDE LAYOUT */}
                 </Route>
 
                 {/* 404 Route */}
